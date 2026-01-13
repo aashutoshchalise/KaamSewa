@@ -142,3 +142,7 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "0.0.0.0", "192.168.1.144"]
+
+APPEND_SLASH = False

@@ -16,8 +16,6 @@ export type RegisterPayload = {
   email?: string;
   password: string;
   password2: string;
-  // If your backend expects role on register, add:
-  // role?: "client" | "worker" | "admin";
 };
 
 export async function login(payload: LoginPayload) {

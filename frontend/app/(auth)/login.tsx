@@ -4,25 +4,20 @@ import { useAuth } from "../../src/store/AuthContext";
 import { router } from "expo-router";
 
 export default function LoginScreen() {
-  const { login } = useAuth(); 
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
 
   const onLogin = async () => {
-    if (!username.trim() || !password) {
-      Alert.alert("Missing info", "Please enter username and password.");
-      return;
-    }
-
     try {
-      setSubmitting(true);
       await login(username.trim(), password);
-      router.replace("/"); // your index.tsx handles role redirect
+      router.replace("/");
     } catch (e: any) {
-      Alert.alert("Login failed", "Check username/password or server connection.");
-    } finally {
-      setSubmitting(false);
+      console.log("LOGIN ERROR:", e.response?.data || e.message);
+      Alert.alert(
+        "Login failed",
+        JSON.stringify(e.response?.data || e.message)
+      );
     }
   };
 
@@ -35,7 +30,6 @@ export default function LoginScreen() {
         value={username}
         onChangeText={setUsername}
         autoCapitalize="none"
-        autoCorrect={false}
         style={{ borderWidth: 1, padding: 12, borderRadius: 8 }}
       />
 
@@ -47,7 +41,7 @@ export default function LoginScreen() {
         style={{ borderWidth: 1, padding: 12, borderRadius: 8 }}
       />
 
-      <Button title={submitting ? "Logging in..." : "Login"} onPress={onLogin} disabled={submitting} />
+      <Button title="Login" onPress={onLogin} />
     </View>
   );
 }

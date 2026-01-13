@@ -1,23 +1,27 @@
-import { ActivityIndicator, View } from "react-native";
+import React from "react";
+import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuth } from "../src/store/AuthContext";
 
 export default function Index() {
   const { booting, role } = useAuth();
 
+  // while checking token / calling /api/me
   if (booting) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
+        <ActivityIndicator size="large" />
       </View>
     );
   }
 
-  // Not logged in
-  if (!role) return <Redirect href="/(auth)/login" />;
+  // not logged in -> go login
+  if (!role) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
-  // Role-based redirect
-  if (role === "CLIENT") return <Redirect href="/(client)" />;
+  // logged in -> role home
+  if (role === "ADMIN") return <Redirect href="/(admin)" />;
   if (role === "WORKER") return <Redirect href="/(worker)" />;
-  return <Redirect href="/(admin)" />;
+  return <Redirect href="/(client)" />;
 }

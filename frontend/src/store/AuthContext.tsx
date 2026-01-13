@@ -1,13 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login, me, logout as apiLogout } from "../api/auth";
+import { login as loginApi, me as meApi } from "../api/auth";
 import type { User } from "../types";
-
-export type Role = User["role"]; // expects your User type has: role: "CLIENT" | "WORKER" | "ADMIN" (or similar)
 
 type AuthState = {
   user: User | null;
-  role: Role | null;
+  role: User["role"] | null;
   booting: boolean;
 };
 
@@ -21,23 +19,24 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
+  const [role, setRole] = useState<User["role"] | null>(null);
   const [booting, setBooting] = useState(true);
 
   async function refreshMe() {
-    const profile = await me();
-    setUser(profile);
-    setRole(profile.role as Role);
+    const me = await meApi();
+    setUser(me);
+    setRole(me.role);
   }
 
-  async function handleLogin(username: string, password: string) {
-    // login() already stores tokens via setTokens() inside api/auth.ts
-    await login({ username, password });
+  async function login(username: string, password: string) {
+    const tokens = await loginApi({ username, password });
+    await AsyncStorage.setItem("access_token", tokens.access);
+    await AsyncStorage.setItem("refresh_token", tokens.refresh);
     await refreshMe();
   }
 
-  async function handleLogout() {
-    await apiLogout(); // clears tokens via clearTokens() in api/auth.ts
+  async function logout() {
+    await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
     setUser(null);
     setRole(null);
   }
@@ -46,9 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const access = await AsyncStorage.getItem("access_token");
-        if (access) {
-          await refreshMe();
-        }
+        if (access) await refreshMe();
       } catch {
         await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
       } finally {
@@ -58,14 +55,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({
-      user,
-      role,
-      booting,
-      login: handleLogin,
-      logout: handleLogout,
-      refreshMe,
-    }),
+    () => ({ user, role, booting, login, logout, refreshMe }),
     [user, role, booting]
   );
 
