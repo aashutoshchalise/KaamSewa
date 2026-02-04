@@ -43,3 +43,12 @@ export async function me() {
 export async function logout() {
   await clearTokens();
 }
+
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const ACCESS_KEY = "access_token";
+
+export async function getAccessToken() {
+  return AsyncStorage.getItem(ACCESS_KEY);
+}

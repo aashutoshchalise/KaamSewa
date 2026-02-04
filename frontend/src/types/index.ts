@@ -1,33 +1,45 @@
-export type Role = "CLIENT" | "WORKER" | "ADMIN";
+// ===== USER =====
+export type Role = "ADMIN" | "WORKER" | "CLIENT";
 
 export interface User {
   id: number;
   username: string;
   email?: string | null;
+  phone?: string | null;
   role: Role;
+  is_worker_approved?: boolean;
+  is_staff?: boolean;
 }
 
-export type PricingUnit = "hour" | "fixed" | string;
-
-export type Service = {
+// ===== SERVICE =====
+export interface Service {
   id: number;
   name: string;
-  base_price: number;
   description?: string;
-  pricing_unit?: "hour" | "fixed" | string;
-  is_active?: boolean;
-  created_at?: string;
-};
+  base_price: string;
+  pricing_unit: "HOUR" | "FIXED";
+}
 
-export type Booking = {
+// ===== BOOKING =====
+export type BookingStatus =
+  | "PENDING"
+  | "ACCEPTED"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELED";
+
+export interface Booking {
   id: number;
-  type?: "service" | "package" | string;
-  status: string;
-  scheduled_at?: string;
-  address?: string;
+  client: number;
+  worker: number | null;
+  service: number;
+  service_name: string;
+  service_price: string;
+  service_pricing_unit: "HOUR" | "FIXED";
+  address: string;
   notes?: string;
-  quote_amount?: number;
-
-  // service booking
-  service?: Service;
-};
+  scheduled_at?: string | null;
+  status: BookingStatus;
+  created_at: string;
+  updated_at: string;
+}
