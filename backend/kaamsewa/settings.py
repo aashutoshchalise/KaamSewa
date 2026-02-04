@@ -22,14 +22,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third-party apps
     "rest_framework",
-    "rest_framework_simplejwt",
     "corsheaders",
-
-    # Phase 1 apps (new architecture)
     "accounts",
     "services",
+    "bookings", 
 
     # ❗TEMP DISABLED (old apps cause conflicts because they include users.CustomUser)
     # "users",
