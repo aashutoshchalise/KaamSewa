@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { login as loginApi, me as meApi } from "../api/auth";
+import { login as loginApi, meApi } from "../api/auth";
 import type { User } from "../types";
 
 type AuthState = {

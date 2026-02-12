@@ -1,36 +1,33 @@
 import React from "react";
 import { View, Text, FlatList, Pressable, ActivityIndicator, Alert } from "react-native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { availableBookings, acceptBooking } from "../../src/api/bookings";
+import { acceptJob, getAvailableJobs } from "../../src/api/bookings";
 import type { Booking } from "../../src/types";
+
 
 export default function JobsScreen() {
   const qc = useQueryClient();
 
   const { data, isLoading, refetch, isFetching } = useQuery<Booking[]>({
-    queryKey: ["availableBookings"],
-    queryFn: availableBookings,
+    queryKey: ["availableJobs"],
+    queryFn: getAvailableJobs,
   });
 
-  const acceptMut = useMutation({
-    mutationFn: (id: number) => acceptBooking(id),
+  const accept = useMutation({
+    mutationFn: (id: number) => acceptJob(id),
     onSuccess: async () => {
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["availableBookings"] }),
-        qc.invalidateQueries({ queryKey: ["myBookings"] }),
-      ]);
-      Alert.alert("Accepted", "You accepted the job.");
+      await qc.invalidateQueries({ queryKey: ["availableJobs"] });
+      await qc.invalidateQueries({ queryKey: ["myBookings"] });
+      Alert.alert("Accepted", "Job accepted successfully.");
     },
-    onError: (e: any) => {
-      Alert.alert("Accept failed", e?.response?.data?.detail || "Try again");
-    },
+    onError: () => Alert.alert("Error", "Could not accept job."),
   });
 
-  if (isLoading) return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
+  if (isLoading) return <ActivityIndicator style={{ marginTop: 40 }} />;
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 10 }}>
+      <Text style={{ fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
         Available Jobs
       </Text>
 
@@ -43,17 +40,15 @@ export default function JobsScreen() {
           marginBottom: 12,
         }}
       >
-        <Text style={{ textAlign: "center", fontWeight: "600" }}>
+        <Text style={{ textAlign: "center" }}>
           {isFetching ? "Refreshing..." : "Refresh"}
         </Text>
       </Pressable>
 
       <FlatList
-        data={data || []}
+        data={data ?? []}
         keyExtractor={(item) => String(item.id)}
-        ListEmptyComponent={
-          <Text style={{ opacity: 0.7 }}>No available jobs right now.</Text>
-        }
+        ListEmptyComponent={<Text>No available jobs.</Text>}
         renderItem={({ item }) => (
           <View
             style={{
@@ -63,14 +58,13 @@ export default function JobsScreen() {
               marginBottom: 10,
             }}
           >
-            <Text style={{ fontWeight: "700" }}>{item.service_name ?? `Service #${item.service}`}</Text>
+            <Text style={{ fontWeight: "700" }}>{item.service_name}</Text>
             <Text>Address: {item.address}</Text>
-            {!!item.notes && <Text>Notes: {item.notes}</Text>}
             <Text>Status: {item.status}</Text>
 
             <Pressable
-              disabled={acceptMut.isPending}
-              onPress={() => acceptMut.mutate(item.id)}
+              onPress={() => accept.mutate(item.id)}
+              disabled={accept.isPending}
               style={{
                 marginTop: 10,
                 padding: 12,
@@ -78,8 +72,8 @@ export default function JobsScreen() {
                 borderWidth: 1,
               }}
             >
-              <Text style={{ textAlign: "center", fontWeight: "700" }}>
-                {acceptMut.isPending ? "Accepting..." : "Accept Job"}
+              <Text style={{ textAlign: "center" }}>
+                {accept.isPending ? "Accepting..." : "Accept"}
               </Text>
             </Pressable>
           </View>

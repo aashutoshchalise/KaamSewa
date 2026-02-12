@@ -1,26 +1,15 @@
-// ===== USER =====
 export type Role = "ADMIN" | "WORKER" | "CLIENT";
 
-export interface User {
-  id: number;
+export type User = {
+  id: number | string;
   username: string;
-  email?: string | null;
+  email?: string;
   phone?: string | null;
   role: Role;
   is_worker_approved?: boolean;
   is_staff?: boolean;
-}
+};
 
-// ===== SERVICE =====
-export interface Service {
-  id: number;
-  name: string;
-  description?: string;
-  base_price: string;
-  pricing_unit: "HOUR" | "FIXED";
-}
-
-// ===== BOOKING =====
 export type BookingStatus =
   | "PENDING"
   | "ACCEPTED"
@@ -28,7 +17,7 @@ export type BookingStatus =
   | "COMPLETED"
   | "CANCELED";
 
-export interface Booking {
+export type Booking = {
   id: number;
   client: number;
   worker: number | null;
@@ -37,9 +26,9 @@ export interface Booking {
   service_price: string;
   service_pricing_unit: "HOUR" | "FIXED";
   address: string;
-  notes?: string;
-  scheduled_at?: string | null;
+  notes: string;
+  scheduled_at: string | null;
   status: BookingStatus;
   created_at: string;
   updated_at: string;
-}
+};
