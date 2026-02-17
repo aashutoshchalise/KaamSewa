@@ -16,8 +16,7 @@ export type LoginResponse = {
 
 export type MeResponse = User;
 
-const BASE_URL =
-  "https://astounding-dextrorsely-chiquita.ngrok-free.dev";
+const BASE_URL = "http://192.168.1.172:8001";
 
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";

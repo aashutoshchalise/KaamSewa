@@ -28,3 +28,9 @@ class ServiceCreateView(generics.CreateAPIView):
     permission_classes = [IsAdmin]
     serializer_class = ServiceSerializer
     queryset = Service.objects.all()
+
+
+class ServiceDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = Service.objects.filter(is_active=True)
+    serializer_class = ServiceSerializer
