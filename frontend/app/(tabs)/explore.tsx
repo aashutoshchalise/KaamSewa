@@ -1,15 +1,25 @@
 import React from "react";
-import { View, Text, FlatList, Pressable, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 
 import { getServiceList } from "~/api/services";
 import type { Service } from "~/types";
 
 export default function ExploreScreen() {
-  const { data, isLoading, isFetching, refetch, error } = useQuery<Service[]>({
-    queryKey: ["services"],
-    queryFn: getServiceList,
-  });
+  const router = useRouter();
+
+  const { data, isLoading, isFetching, refetch, error } =
+    useQuery<Service[]>({
+      queryKey: ["services"],
+      queryFn: getServiceList,
+    });
 
   if (isLoading) {
     return <ActivityIndicator size="large" style={{ marginTop: 40 }} />;
@@ -18,13 +28,16 @@ export default function ExploreScreen() {
   if (error) {
     return (
       <View style={{ flex: 1, padding: 16, justifyContent: "center", gap: 12 }}>
-        <Text style={{ fontSize: 18, fontWeight: "600" }}>Failed to load services</Text>
-        <Text style={{ opacity: 0.7 }}>Check backend URL / network.</Text>
+        <Text style={{ fontSize: 18, fontWeight: "600" }}>
+          Failed to load services
+        </Text>
         <Pressable
           onPress={() => refetch()}
           style={{ backgroundColor: "#000", padding: 12, borderRadius: 10 }}
         >
-          <Text style={{ color: "#fff", textAlign: "center" }}>Try again</Text>
+          <Text style={{ color: "#fff", textAlign: "center" }}>
+            Try again
+          </Text>
         </Pressable>
       </View>
     );
@@ -32,27 +45,12 @@ export default function ExploreScreen() {
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Pressable
-        onPress={() => refetch()}
-        style={{
-          backgroundColor: "#000",
-          padding: 12,
-          borderRadius: 10,
-          marginBottom: 12,
-          opacity: isFetching ? 0.6 : 1,
-        }}
-        disabled={isFetching}
-      >
-        <Text style={{ color: "#fff", textAlign: "center", fontWeight: "600" }}>
-          {isFetching ? "Refreshing..." : "Refresh Services"}
-        </Text>
-      </Pressable>
-
       <FlatList
         data={data ?? []}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <View
+          <Pressable
+            onPress={() => router.push(`/service/${item.id}`)}
             style={{
               padding: 14,
               borderWidth: 1,
@@ -62,11 +60,14 @@ export default function ExploreScreen() {
               backgroundColor: "#fff",
             }}
           >
-            <Text style={{ fontWeight: "700", fontSize: 16 }}>{item.name}</Text>
-            <Text style={{ marginTop: 4, opacity: 0.7 }}>
-              Rs {item.base_price} • {item.pricing_unit}
+            <Text style={{ fontWeight: "700", fontSize: 16 }}>
+              {item.name}
             </Text>
-          </View>
+
+            <Text style={{ marginTop: 4, opacity: 0.7 }}>
+              Rs {item.price} • {item.pricing_unit}
+            </Text>
+          </Pressable>
         )}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", marginTop: 40, opacity: 0.6 }}>

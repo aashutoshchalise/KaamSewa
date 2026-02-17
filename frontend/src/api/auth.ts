@@ -1,6 +1,5 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
 import type { User } from "../types";
 
 export type Role = "ADMIN" | "WORKER" | "CLIENT";
@@ -17,23 +16,11 @@ export type LoginResponse = {
 
 export type MeResponse = User;
 
+const BASE_URL =
+  "https://astounding-dextrorsely-chiquita.ngrok-free.dev";
+
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";
-
-/**
- * Run: ipconfig getifaddr en0
- */
-const DEVICE_IP = "192.168.1.171";
-
-/**
- * Environment-safe BASE_URL
- */
-const BASE_URL =
-  Platform.OS === "android"
-    ? "http://10.0.2.2:8001" // Android emulator
-    : __DEV__
-    ? `http://${DEVICE_IP}:8001` // iOS physical device (Expo Go)
-    : "http://127.0.0.1:8001"; // fallback (simulator)
 
 const http = axios.create({
   baseURL: BASE_URL,
@@ -61,7 +48,10 @@ export async function getRefreshToken() {
 }
 
 export async function login(payload: LoginPayload) {
-  const { data } = await http.post<LoginResponse>("/api/auth/login/", payload);
+  const { data } = await http.post<LoginResponse>(
+    "/api/auth/login/",
+    payload
+  );
   await setTokens(data.access, data.refresh);
   return data;
 }

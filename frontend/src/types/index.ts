@@ -32,3 +32,12 @@ export type Booking = {
   created_at: string;
   updated_at: string;
 };
+
+export type Service = {
+  id: number;
+  name: string;
+  description?: string;
+  base_price: string;
+  pricing_unit: "HOUR" | "FIXED";
+  is_active?: boolean;
+};

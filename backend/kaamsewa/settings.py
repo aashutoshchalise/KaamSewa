@@ -140,11 +140,6 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-ALLOWED_HOSTS = [
-    '127.0.0.1',
-    'localhost',
-    '0.0.0.0',
-    '192.168.1.171',
-]
+ALLOWED_HOSTS = ["*"]
 
 APPEND_SLASH = False
