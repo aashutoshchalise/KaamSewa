@@ -1,10 +1,22 @@
 from rest_framework import generics, permissions
-from .models import Service, ServiceCategory
-from .serializers import ServiceSerializer, ServiceCategorySerializer
 from accounts.permissions import IsAdmin
+from .models import (
+    Service,
+    ServiceCategory,
+    ServicePackage,
+    ServicePackageItem,
+)
+from .serializers import (
+    ServiceSerializer,
+    ServiceCategorySerializer,
+    ServicePackageSerializer,
+    ServicePackageItemSerializer,
+)
 
 
-# Public/authenticated browsing
+# =========================
+# CATEGORY & SERVICE BROWSE
+# =========================
 class CategoryListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = ServiceCategory.objects.all().order_by("name")
@@ -13,24 +25,51 @@ class CategoryListView(generics.ListAPIView):
 
 class ServiceListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Service.objects.filter(is_active=True).select_related("category").order_by("name")
+    queryset = (
+        Service.objects.filter(is_active=True)
+        .select_related("category")
+        .order_by("name")
+    )
     serializer_class = ServiceSerializer
 
 
-# Admin CRUD
+# =========================
+# PACKAGE (USP)
+# =========================
+class PackageListView(generics.ListAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = ServicePackage.objects.filter(is_active=True).order_by("name")
+    serializer_class = ServicePackageSerializer
+
+
+class PackageDetailView(generics.RetrieveAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = ServicePackage.objects.all()
+    serializer_class = ServicePackageSerializer
+
+
+# =========================
+# ADMIN CREATE
+# =========================
 class CategoryCreateView(generics.CreateAPIView):
     permission_classes = [IsAdmin]
-    serializer_class = ServiceCategorySerializer
     queryset = ServiceCategory.objects.all()
+    serializer_class = ServiceCategorySerializer
 
 
 class ServiceCreateView(generics.CreateAPIView):
     permission_classes = [IsAdmin]
-    serializer_class = ServiceSerializer
     queryset = Service.objects.all()
-
-
-class ServiceDetailView(generics.RetrieveAPIView):
-    permission_classes = [permissions.IsAuthenticated]
-    queryset = Service.objects.filter(is_active=True)
     serializer_class = ServiceSerializer
+
+
+class PackageCreateView(generics.CreateAPIView):
+    permission_classes = [IsAdmin]
+    queryset = ServicePackage.objects.all()
+    serializer_class = ServicePackageSerializer
+
+
+class PackageItemCreateView(generics.CreateAPIView):
+    permission_classes = [IsAdmin]
+    queryset = ServicePackageItem.objects.all()
+    serializer_class = ServicePackageItemSerializer

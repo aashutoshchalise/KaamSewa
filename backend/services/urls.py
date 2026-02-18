@@ -4,16 +4,30 @@ from .views import (
     ServiceListView,
     CategoryCreateView,
     ServiceCreateView,
-    ServiceDetailView,   # ADD THIS
+    PackageListView,
+    PackageDetailView,
+    PackageCreateView,
+    PackageItemCreateView,
 )
 
 urlpatterns = [
-    # browse
+    # =====================
+    # Browse
+    # =====================
     path("categories/", CategoryListView.as_view()),
     path("", ServiceListView.as_view()),
-    path("<int:pk>/", ServiceDetailView.as_view()),  # ADD THIS
 
-    # admin create
+    # =====================
+    # Packages (USP)
+    # =====================
+    path("packages/", PackageListView.as_view()),
+    path("packages/<int:pk>/", PackageDetailView.as_view()),
+
+    # =====================
+    # Admin Create
+    # =====================
     path("admin/categories/create/", CategoryCreateView.as_view()),
     path("admin/create/", ServiceCreateView.as_view()),
+    path("admin/packages/create/", PackageCreateView.as_view()),
+    path("admin/packages/items/create/", PackageItemCreateView.as_view()),
 ]
