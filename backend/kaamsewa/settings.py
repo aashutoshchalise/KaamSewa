@@ -24,9 +24,10 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "corsheaders",
-    "accounts",
+    "accounts.apps.AccountsConfig",
     "services",
     "bookings", 
+    'reviews',
 
     # ❗TEMP DISABLED (old apps cause conflicts because they include users.CustomUser)
     # "users",

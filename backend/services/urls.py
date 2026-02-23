@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     CategoryListView,
     ServiceListView,
+    ServiceDetailView,
     CategoryCreateView,
     ServiceCreateView,
     PackageListView,
@@ -11,21 +12,16 @@ from .views import (
 )
 
 urlpatterns = [
-    # =====================
-    # Browse
-    # =====================
+    # browse
     path("categories/", CategoryListView.as_view()),
     path("", ServiceListView.as_view()),
+    path("<int:pk>/", ServiceDetailView.as_view()),  # ✅ ADD THIS
 
-    # =====================
-    # Packages (USP)
-    # =====================
+    # packages
     path("packages/", PackageListView.as_view()),
     path("packages/<int:pk>/", PackageDetailView.as_view()),
 
-    # =====================
-    # Admin Create
-    # =====================
+    # admin create
     path("admin/categories/create/", CategoryCreateView.as_view()),
     path("admin/create/", ServiceCreateView.as_view()),
     path("admin/packages/create/", PackageCreateView.as_view()),
