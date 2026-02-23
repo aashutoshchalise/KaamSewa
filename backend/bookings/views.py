@@ -323,6 +323,13 @@ class UpdateBookingStatusView(APIView):
 
         # ADMIN can do anything
         if r == "ADMIN":
+
+            if not booking.can_transition(new_status):
+                return Response(
+                    {"detail": f"Invalid transition from {booking.status} to {new_status}"},
+                    status=400,
+                )
+
             booking.status = new_status
             booking.save(update_fields=["status", "updated_at"])
             return Response(BookingListSerializer(booking).data)
@@ -342,6 +349,8 @@ class UpdateBookingStatusView(APIView):
             booking.status = Booking.Status.CANCELED
             booking.save(update_fields=["status", "updated_at"])
             return Response(BookingListSerializer(booking).data)
+
+            
 
         # WORKER should NOT patch status here
         if r == "WORKER":

@@ -1,13 +1,12 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Q
 from django.core.validators import MinValueValidator
 
 
 class Booking(models.Model):
     class Status(models.TextChoices):
-        PENDING = "PENDING", "Pending"           # created by client, not claimed
-        CLAIMED = "CLAIMED", "Claimed"           # locked to one worker
+        PENDING = "PENDING", "Pending"
+        CLAIMED = "CLAIMED", "Claimed"
         NEGOTIATING = "NEGOTIATING", "Negotiating"
         ACCEPTED = "ACCEPTED", "Accepted"
         IN_PROGRESS = "IN_PROGRESS", "In Progress"
@@ -29,9 +28,6 @@ class Booking(models.Model):
         related_name="worker_bookings",
     )
 
-    # NOTE:
-    # Keep service nullable for now to avoid migration prompts if old rows exist.
-    # We enforce "service OR package must exist" at serializer level.
     service = models.ForeignKey(
         "services.Service",
         on_delete=models.PROTECT,
@@ -40,7 +36,6 @@ class Booking(models.Model):
         related_name="bookings",
     )
 
-    # Package booking USP (optional)
     package = models.ForeignKey(
         "services.ServicePackage",
         on_delete=models.PROTECT,
@@ -53,7 +48,6 @@ class Booking(models.Model):
     notes = models.TextField(blank=True)
     scheduled_at = models.DateTimeField(null=True, blank=True)
 
-    # Final agreed price after negotiation (or direct acceptance)
     final_price = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -79,16 +73,43 @@ class Booking(models.Model):
         ]
 
     def __str__(self):
-        subject = self.service.name if self.service_id else (self.package.name if self.package_id else "N/A")
+        subject = (
+            self.service.name
+            if self.service_id
+            else (self.package.name if self.package_id else "N/A")
+        )
         return f"Booking #{self.id} - {subject} - {self.status}"
+
+    def can_transition(self, new_status: str) -> bool:
+        allowed_transitions = {
+            self.Status.PENDING: [
+                self.Status.CLAIMED,
+                self.Status.CANCELED,
+            ],
+            self.Status.CLAIMED: [
+                self.Status.NEGOTIATING,
+                self.Status.CANCELED,
+            ],
+            self.Status.NEGOTIATING: [
+                self.Status.ACCEPTED,
+                self.Status.CANCELED,
+            ],
+            self.Status.ACCEPTED: [
+                self.Status.IN_PROGRESS,
+                self.Status.CANCELED,
+            ],
+            self.Status.IN_PROGRESS: [
+                self.Status.COMPLETED,
+            ],
+            self.Status.COMPLETED: [],
+            self.Status.CANCELED: [],
+            self.Status.REJECTED: [],
+        }
+
+        return new_status in allowed_transitions.get(self.status, [])
 
 
 class BookingNegotiation(models.Model):
-    """
-    Single negotiation message/offer.
-    Think of it as a timeline of proposals.
-    """
-
     class Status(models.TextChoices):
         OPEN = "OPEN", "Open"
         ACCEPTED = "ACCEPTED", "Accepted"
@@ -100,8 +121,6 @@ class BookingNegotiation(models.Model):
         related_name="negotiations",
     )
 
-    # Keep nullable to avoid migration prompt if legacy rows exist.
-    # We enforce non-null on create in serializer.
     proposed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -133,16 +152,15 @@ class BookingNegotiation(models.Model):
         ]
 
     def __str__(self):
-        return f"Negotiation#{self.id} Booking#{self.booking_id} {self.proposed_price} {self.status}"
+        return (
+            f"Negotiation#{self.id} "
+            f"Booking#{self.booking_id} "
+            f"{self.proposed_price} "
+            f"{self.status}"
+        )
 
 
 class BookingEvent(models.Model):
-    """
-    Scalable foundation:
-    - every important action becomes an event (audit log + future realtime)
-    - metadata stores flexible payload (prices, reasons, coordinates, etc.)
-    """
-
     class Type(models.TextChoices):
         BOOKING_CREATED = "BOOKING_CREATED", "Booking Created"
         BOOKING_CANCELED = "BOOKING_CANCELED", "Booking Canceled"
