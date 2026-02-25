@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "services",
     "bookings", 
     'reviews',
+    'payments',
 
     # ❗TEMP DISABLED (old apps cause conflicts because they include users.CustomUser)
     # "users",

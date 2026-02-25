@@ -56,6 +56,9 @@ class WorkerProfile(models.Model):
     # Cached rating (kept in sync by WorkerReview save/delete)
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     rating_count = models.PositiveIntegerField(default=0)
+    
+    total_earned = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
 
     def __str__(self):
         return f"WorkerProfile: {self.user.username}"
@@ -70,6 +73,8 @@ class WorkerProfile(models.Model):
         self.rating_avg = round(float(avg), 2)
         self.rating_count = cnt
         self.save(update_fields=["rating_avg", "rating_count"])
+
+    
 
 
 class WorkerReview(models.Model):

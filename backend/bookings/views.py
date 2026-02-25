@@ -3,6 +3,8 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from payments.models import Payment
+from decimal import Decimal
 
 from .models import Booking, BookingNegotiation, BookingEvent
 from .serializers import (
@@ -296,6 +298,39 @@ class CompleteJobView(APIView):
 
             booking.status = Booking.Status.COMPLETED
             booking.save(update_fields=["status", "updated_at"])
+
+            # --------------------------
+            # Create Payment (Mock)
+            # --------------------------
+            if not hasattr(booking, "payment"):
+
+                commission_rate = Decimal("0.10")  # 10% platform fee
+
+                # ✅ Decide total_amount correctly
+                if booking.final_price is not None:
+                    total_amount = booking.final_price
+                elif booking.service_id is not None:
+                    total_amount = booking.service.base_price
+                elif booking.package_id is not None:
+                    total_amount = booking.package.price  # only if your ServicePackage has `price`
+                else:
+                    return Response(
+                        {"detail": "Cannot create payment: no price source (final_price/service/package)."},
+                        status=400,
+                    )
+
+                commission_amount = (total_amount * commission_rate).quantize(Decimal("0.01"))
+                worker_earning = (total_amount - commission_amount).quantize(Decimal("0.01"))
+
+                Payment.objects.create(
+                    booking=booking,
+                    client=booking.client,
+                    worker=booking.worker,
+                    amount=total_amount,
+                    commission_amount=commission_amount,
+                    worker_earning=worker_earning,
+                    status=Payment.Status.PENDING,
+                )
 
         return Response(BookingListSerializer(booking).data, status=200)
 
