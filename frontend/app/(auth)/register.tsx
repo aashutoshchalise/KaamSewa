@@ -1,27 +1,34 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { register } from "../../src/api/auth";
 import { useAuth } from "../../src/store/AuthContext";
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { login } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<"CLIENT" | "WORKER">("CLIENT");
 
-  async function handleLogin() {
+  async function handleRegister() {
     try {
+      await register({ username, password, role });
+
+      // Auto login after register
       await login(username, password);
+
       router.replace("/");
     } catch (err) {
-      alert("Login failed");
+      console.log(err);
+      alert("Registration failed");
     }
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Register</Text>
 
       <TextInput
         placeholder="Username"
@@ -38,21 +45,27 @@ export default function LoginScreen() {
         style={styles.input}
       />
 
-      <Button title="Login" onPress={handleLogin} />
-
-      <View style={{ marginTop: 16 }}>
-        <Button
-          title="Don't have an account? Register"
-          onPress={() => router.push("/register")}
-        />
+      <View style={{ marginBottom: 20 }}>
+        <Button title="Register as Client" onPress={() => setRole("CLIENT")} />
+        <Button title="Register as Worker" onPress={() => setRole("WORKER")} />
       </View>
+
+      <Button title="Register" onPress={handleRegister} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center" },
-  title: { fontSize: 24, marginBottom: 24, textAlign: "center" },
+  container: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 24,
+    marginBottom: 24,
+    textAlign: "center",
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",

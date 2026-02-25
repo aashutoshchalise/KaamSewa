@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { login as loginApi, meApi } from "../api/auth";
 import type { User } from "../types";
@@ -22,16 +29,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<User["role"] | null>(null);
   const [booting, setBooting] = useState(true);
 
+  const initializing = useRef(false);
+
   async function refreshMe() {
-    const me = await meApi();
-    setUser(me);
-    setRole(me.role);
+    try {
+      const me = await meApi();
+  
+      setUser(prev => {
+        if (prev?.id === me.id && prev?.role === me.role) {
+          return prev;
+        }
+        return me;
+      });
+  
+      setRole(prev => {
+        if (prev === me.role) return prev;
+        return me.role;
+      });
+  
+    } catch {
+      await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+      setUser(null);
+      setRole(null);
+    }
   }
 
   async function login(username: string, password: string) {
-    const tokens = await loginApi({ username, password });
-    await AsyncStorage.setItem("access_token", tokens.access);
-    await AsyncStorage.setItem("refresh_token", tokens.refresh);
+    await loginApi({ username, password });
     await refreshMe();
   }
 
@@ -42,12 +66,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    if (initializing.current) return;
+
+    initializing.current = true;
+
     (async () => {
       try {
         const access = await AsyncStorage.getItem("access_token");
-        if (access) await refreshMe();
-      } catch {
-        await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
+        if (access) {
+          await refreshMe();
+        }
       } finally {
         setBooting(false);
       }

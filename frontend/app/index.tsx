@@ -1,23 +1,28 @@
-import React from "react";
-import { View, ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { useAuth } from "../src/store/AuthContext";
 
 export default function Index() {
-  const { booting, role } = useAuth();
+  const { user, role, booting } = useAuth();
 
   if (booting) {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+    return null;
   }
 
-  if (!role) {
+  if (!user) {
     return <Redirect href="/(auth)/login" />;
   }
 
-  //  ALWAYS go to tabs root
-  return <Redirect href="/(tabs)" />;
+  if (role === "CLIENT") {
+    return <Redirect href="/(client)/home" />;
+  }
+
+  if (role === "WORKER") {
+    return <Redirect href="/(worker)/dashboard" />;
+  }
+
+  if (role === "ADMIN") {
+    return <Redirect href="/(admin)/dashboard" />;
+  }
+
+  return <Redirect href="/(auth)/login" />;
 }

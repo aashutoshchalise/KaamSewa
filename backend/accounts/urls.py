@@ -7,6 +7,7 @@ from .views import (
     AdminCreateWorkerView,
     AdminApproveWorkerView,
     WorkerProfileMeView,
+    RegisterView,
 )
 
 urlpatterns = [
@@ -22,4 +23,7 @@ urlpatterns = [
 
     # Worker profile
     path("worker/profile/", WorkerProfileMeView.as_view()),
+
+
+    path("register/", RegisterView.as_view(), name="register"),
 ]

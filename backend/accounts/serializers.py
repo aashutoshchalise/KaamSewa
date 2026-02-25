@@ -64,3 +64,36 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
         model = WorkerProfile
         fields = ("bio", "hourly_rate", "availability_status", "skills", "rating_avg", "rating_count")
         read_only_fields = ("rating_avg", "rating_count")
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=6)
+
+    class Meta:
+        model = User
+        fields = ["username", "password", "role"]
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+    def validate_role(self, value):
+        allowed_roles = ["CLIENT", "WORKER", "ADMIN"]
+        if value not in allowed_roles:
+            raise serializers.ValidationError("Invalid role.")
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+
+        user = User.objects.create_user(
+            password=password,
+            **validated_data
+        )
+
+        # Auto create WorkerProfile if worker
+        if user.role == "WORKER":
+            WorkerProfile.objects.create(user=user)
+
+        return user

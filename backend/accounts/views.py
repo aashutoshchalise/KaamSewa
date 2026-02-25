@@ -13,6 +13,8 @@ from .serializers import (
     WorkerProfileSerializer,
 )
 from .models import WorkerProfile
+from rest_framework import status
+from .serializers import RegisterSerializer
 
 User = get_user_model()
 
@@ -71,3 +73,16 @@ class WorkerProfileMeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return WorkerProfile.objects.get(user=self.request.user)
+
+
+class RegisterView(APIView):
+    permission_classes = []
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "User registered successfully."},
+            status=status.HTTP_201_CREATED,
+        )

@@ -75,3 +75,14 @@ export function normalizeRole(roleRaw?: string): Role | null {
   if (r.includes("CLIENT")) return "CLIENT";
   return null;
 }
+
+export type RegisterPayload = {
+  username: string;
+  password: string;
+  role: "CLIENT" | "WORKER";
+};
+
+export async function register(payload: RegisterPayload) {
+  const { data } = await http.post("/api/register/", payload);
+  return data;
+}
