@@ -1,103 +1,118 @@
-import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Pressable,
-  Alert,
+  StyleSheet,
+  FlatList,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { createBooking } from "@/src/api/bookings";
+import { useQuery } from "@tanstack/react-query";
+import { getMyBookings } from "../../src/api/bookings";
+import type { Booking } from "../../src/types";
+import { Ionicons } from "@expo/vector-icons";
 
-export default function BookingScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+export default function ClientBookings() {
+  const { data, isLoading } = useQuery<Booking[]>({
+    queryKey: ["my-bookings"],
+    queryFn: getMyBookings,
+  });
 
-  const [address, setAddress] = useState("");
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#FFC300" />
+      </View>
+    );
+  }
 
-  const handleBooking = async () => {
-    if (!address) {
-      Alert.alert("Address required");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      await createBooking({
-        service: Number(id),
-        address,
-        notes,
-        scheduled_at: null,
-      });
-
-      Alert.alert("Success", "Booking created!");
-
-      router.replace("/(tabs)/bookings");
-    } catch (err) {
-      console.log("BOOKING ERROR:", err);
-      Alert.alert("Error", "Failed to create booking");
-    } finally {
-      setLoading(false);
-    }
-  };
+  if (!data || data.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Ionicons name="document-outline" size={60} color="#CCCCCC" />
+        <Text style={{ marginTop: 15, color: "#666666" }}>
+          No bookings yet
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 20 }}>
-        Create Booking
-      </Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>My Bookings</Text>
 
-      <Text style={{ marginBottom: 5 }}>Address</Text>
-      <TextInput
-        value={address}
-        onChangeText={setAddress}
-        placeholder="Enter service address"
-        style={{
-          borderWidth: 1,
-          borderColor: "#ddd",
-          borderRadius: 8,
-          padding: 12,
-          marginBottom: 20,
-        }}
-      />
+      <FlatList
+        data={data}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingBottom: 30 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity style={styles.card}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.service}>
+                {item.service_name}
+              </Text>
 
-      <Text style={{ marginBottom: 5 }}>Notes (optional)</Text>
-      <TextInput
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Extra instructions..."
-        multiline
-        style={{
-          borderWidth: 1,
-          borderColor: "#ddd",
-          borderRadius: 8,
-          padding: 12,
-          height: 80,
-          marginBottom: 20,
-        }}
-      />
+              <Text style={styles.price}>
+                Rs. {item.service_price} / {item.service_pricing_unit}
+              </Text>
 
-      <Pressable
-        onPress={handleBooking}
-        style={{
-          backgroundColor: "#000",
-          padding: 16,
-          borderRadius: 12,
-          alignItems: "center",
-        }}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={{ color: "#fff", fontWeight: "600" }}>
-            Confirm Booking
-          </Text>
+              <Text style={styles.status}>
+                Status: {item.status}
+              </Text>
+            </View>
+
+            <Ionicons name="chevron-forward" size={20} color="#999999" />
+          </TouchableOpacity>
         )}
-      </Pressable>
+      />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F8F8",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    color: "#111111",
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F8F8",
+  },
+
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#FFFFFF",
+    padding: 15,
+    borderRadius: 16,
+    marginBottom: 15,
+    alignItems: "center",
+  },
+
+  service: {
+    fontWeight: "bold",
+    fontSize: 16,
+    color: "#111111",
+  },
+
+  price: {
+    marginTop: 4,
+    color: "#666666",
+  },
+
+  status: {
+    marginTop: 6,
+    color: "#FFC300",
+    fontWeight: "600",
+  },
+});

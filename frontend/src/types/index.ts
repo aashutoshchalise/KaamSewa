@@ -36,8 +36,8 @@ export type Booking = {
 export type Service = {
   id: number;
   name: string;
-  description?: string;
-  base_price: string;
-  pricing_unit: "HOUR" | "FIXED";
-  is_active?: boolean;
+  description: string;
+  price: string;
+  pricing_unit: string;
+  image?: string;
 };

@@ -10,3 +10,8 @@ export async function getService(id: number | string): Promise<Service> {
   const { data } = await api.get<Service>(`/api/services/${id}/`);
   return data;
 }
+
+export async function getServiceById(id: number) {
+  const { data } = await api.get<Service>(`/api/services/${id}/`);
+  return data;
+}
