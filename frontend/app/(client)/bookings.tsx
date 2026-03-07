@@ -10,8 +10,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getMyBookings } from "../../src/api/bookings";
 import type { Booking } from "../../src/types";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { getStatusMeta } from "../../src/utils/status";
 
 export default function ClientBookings() {
+  const router = useRouter();
+
   const { data, isLoading } = useQuery<Booking[]>({
     queryKey: ["my-bookings"],
     queryFn: getMyBookings,
@@ -44,25 +48,42 @@ export default function ClientBookings() {
         data={data}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ paddingBottom: 30 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.service}>
-                {item.service_name}
-              </Text>
+        renderItem={({ item }) => {
+          const statusMeta = getStatusMeta(item.status);
 
-              <Text style={styles.price}>
-                Rs. {item.service_price} / {item.service_pricing_unit}
-              </Text>
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/(client)/booking/${item.id}`)}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.service}>{item.service_name}</Text>
 
-              <Text style={styles.status}>
-                Status: {item.status}
-              </Text>
-            </View>
+                <Text style={styles.price}>
+                  Rs. {item.service_price} / {item.service_pricing_unit}
+                </Text>
 
-            <Ionicons name="chevron-forward" size={20} color="#999999" />
-          </TouchableOpacity>
-        )}
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: statusMeta.bgColor },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      { color: statusMeta.textColor },
+                    ]}
+                  >
+                    {statusMeta.label}
+                  </Text>
+                </View>
+              </View>
+
+              <Ionicons name="chevron-forward" size={20} color="#999999" />
+            </TouchableOpacity>
+          );
+        }}
       />
     </View>
   );
@@ -110,9 +131,16 @@ const styles = StyleSheet.create({
     color: "#666666",
   },
 
-  status: {
-    marginTop: 6,
-    color: "#FFC300",
+  statusBadge: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+
+  statusText: {
     fontWeight: "600",
+    fontSize: 12,
   },
 });

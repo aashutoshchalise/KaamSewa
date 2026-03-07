@@ -1,179 +1,191 @@
-import React from "react";
 import {
   View,
   Text,
+  StyleSheet,
   FlatList,
-  Pressable,
   ActivityIndicator,
-  Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  getMyBookings,
-  updateBookingStatus,
-} from "../../src/api/bookings";
-import { useAuth } from "../../src/store/AuthContext";
+import { getMyBookings, startJob, completeJob } from "../../src/api/bookings";
 import type { Booking } from "../../src/types";
+import { getStatusMeta } from "../../src/utils/status";
 
-export default function MyJobsScreen() {
+export default function WorkerJobs() {
   const queryClient = useQueryClient();
-  const { logout } = useAuth();
 
-  const {
-    data,
-    isLoading,
-    refetch,
-    isFetching,
-    error,
-  } = useQuery<Booking[]>({
-    queryKey: ["workerJobs"],
+  const { data, isLoading } = useQuery<Booking[]>({
+    queryKey: ["worker-my-jobs"],
     queryFn: getMyBookings,
   });
 
-  const statusMutation = useMutation({
-    mutationFn: ({
-      id,
-      status,
-    }: {
-      id: number;
-      status: Booking["status"];
-    }) => updateBookingStatus(id, status),
+  const startMutation = useMutation({
+    mutationFn: startJob,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workerJobs"] });
-      Alert.alert("Success", "Status updated");
+      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
     },
-    onError: () => {
-      Alert.alert("Error", "Failed to update status");
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: completeJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
     },
   });
 
   if (isLoading) {
-    return <ActivityIndicator style={{ marginTop: 40 }} />;
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#FFC300" />
+      </View>
+    );
   }
 
-  const activeJobs =
-    data?.filter(
-      (b) => b.status === "ACCEPTED" || b.status === "IN_PROGRESS"
-    ) ?? [];
+  if (!data || data.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={{ color: "#666666" }}>No job history yet</Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={{ flex: 1, padding: 16 }}>
-      
-      {/* Header */}
-      <Text style={{ fontSize: 22, fontWeight: "700", marginBottom: 12 }}>
-        My Active Jobs
-      </Text>
-
-      {/* Logout */}
-      <Pressable
-        onPress={async () => {
-          await logout();
-        }}
-        style={{
-          backgroundColor: "#ef4444",
-          padding: 10,
-          borderRadius: 8,
-          marginBottom: 12,
-        }}
-      >
-        <Text style={{ color: "#fff", textAlign: "center", fontWeight: "600" }}>
-          Logout
-        </Text>
-      </Pressable>
-
-      {/* Refresh */}
-      <Pressable
-        onPress={() => refetch()}
-        style={{
-          padding: 12,
-          borderRadius: 10,
-          borderWidth: 1,
-          marginBottom: 12,
-        }}
-      >
-        <Text style={{ textAlign: "center" }}>
-          {isFetching ? "Refreshing..." : "Refresh"}
-        </Text>
-      </Pressable>
-
-      {error && (
-        <Text style={{ color: "red", marginBottom: 10 }}>
-          Failed to load jobs.
-        </Text>
-      )}
+    <View style={styles.container}>
+      <Text style={styles.title}>My Jobs</Text>
 
       <FlatList
-        data={activeJobs}
-        keyExtractor={(item) => String(item.id)}
-        ListEmptyComponent={<Text>No active jobs.</Text>}
-        renderItem={({ item }) => (
-          <View
-            style={{
-              padding: 12,
-              borderWidth: 1,
-              borderRadius: 12,
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ fontWeight: "700", fontSize: 16 }}>
-              {item.service_name}
-            </Text>
+        data={data}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        renderItem={({ item }) => {
+          const statusMeta = getStatusMeta(item.status);
 
-            <Text>Status: {item.status}</Text>
-            <Text>Address: {item.address}</Text>
+          return (
+            <View style={styles.card}>
+              <Text style={styles.serviceName}>{item.service_name}</Text>
 
-            {!!item.notes && <Text>Notes: {item.notes}</Text>}
+              <Text style={styles.price}>
+                Rs. {item.service_price} / {item.service_pricing_unit}
+              </Text>
 
-            {/* ACCEPTED → IN_PROGRESS */}
-            {item.status === "ACCEPTED" && (
-              <Pressable
-                onPress={() =>
-                  statusMutation.mutate({
-                    id: item.id,
-                    status: "IN_PROGRESS",
-                  })
-                }
-                style={{
-                  marginTop: 10,
-                  backgroundColor: "#000",
-                  padding: 10,
-                  borderRadius: 8,
-                  opacity: statusMutation.isPending ? 0.6 : 1,
-                }}
-                disabled={statusMutation.isPending}
+              <Text style={styles.address}>{item.address}</Text>
+
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: statusMeta.bgColor },
+                ]}
               >
-                <Text style={{ color: "#fff", textAlign: "center" }}>
-                  Start Job
+                <Text
+                  style={[
+                    styles.statusText,
+                    { color: statusMeta.textColor },
+                  ]}
+                >
+                  {statusMeta.label}
                 </Text>
-              </Pressable>
-            )}
+              </View>
 
-            {/* IN_PROGRESS → COMPLETED */}
-            {item.status === "IN_PROGRESS" && (
-              <Pressable
-                onPress={() =>
-                  statusMutation.mutate({
-                    id: item.id,
-                    status: "COMPLETED",
-                  })
-                }
-                style={{
-                  marginTop: 10,
-                  backgroundColor: "#16a34a",
-                  padding: 10,
-                  borderRadius: 8,
-                  opacity: statusMutation.isPending ? 0.6 : 1,
-                }}
-                disabled={statusMutation.isPending}
-              >
-                <Text style={{ color: "#fff", textAlign: "center" }}>
-                  Mark Completed
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        )}
+              <View style={styles.actions}>
+                {(item.status === "ACCEPTED" || item.status === "CLAIMED") && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => startMutation.mutate(item.id)}
+                  >
+                    <Text style={styles.actionText}>Start Job</Text>
+                  </TouchableOpacity>
+                )}
+
+                {item.status === "IN_PROGRESS" && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => completeMutation.mutate(item.id)}
+                  >
+                    <Text style={styles.actionText}>Complete Job</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        }}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F8F8",
+    paddingHorizontal: 20,
+    paddingTop: 60,
+  },
+
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8F8F8",
+  },
+
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#111111",
+    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 14,
+  },
+
+  serviceName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  price: {
+    marginTop: 4,
+    color: "#666666",
+  },
+
+  address: {
+    marginTop: 6,
+    color: "#555555",
+  },
+
+  statusBadge: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+
+  statusText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+
+  actionButton: {
+    backgroundColor: "#FFC300",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+
+  actionText: {
+    color: "#111111",
+    fontWeight: "bold",
+  },
+});

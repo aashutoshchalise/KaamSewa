@@ -12,10 +12,13 @@ export type User = {
 
 export type BookingStatus =
   | "PENDING"
+  | "CLAIMED"
+  | "NEGOTIATING"
   | "ACCEPTED"
   | "IN_PROGRESS"
   | "COMPLETED"
-  | "CANCELED";
+  | "CANCELED"
+  | "REJECTED";
 
 export type Booking = {
   id: number;
