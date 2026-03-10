@@ -14,6 +14,9 @@ ALLOWED_HOSTS = ["*"]
 # APPLICATIONS
 # =========================
 INSTALLED_APPS = [
+    # Admin theme
+    "jazzmin",
+
     # Django default apps
     "django.contrib.admin",
     "django.contrib.auth",
@@ -22,18 +25,16 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # Third-party
     "rest_framework",
     "corsheaders",
+
+    # Local apps
     "accounts.apps.AccountsConfig",
     "services",
-    "bookings", 
-    'reviews',
-    'payments',
-
-    # ❗TEMP DISABLED (old apps cause conflicts because they include users.CustomUser)
-    # "users",
-    # "service_app",
-    # "booking",
+    "bookings",
+    "reviews",
+    "payments",
 ]
 
 # =========================

@@ -31,6 +31,7 @@ class Service(models.Model):
     description = models.TextField(blank=True)
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     pricing_unit = models.CharField(max_length=10, choices=PRICING_UNIT_CHOICES)
+    image = models.URLField(blank=True, null=True)  # ✅ added
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

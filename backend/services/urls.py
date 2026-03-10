@@ -15,7 +15,7 @@ urlpatterns = [
     # browse
     path("categories/", CategoryListView.as_view()),
     path("", ServiceListView.as_view()),
-    path("<int:pk>/", ServiceDetailView.as_view()),  # ✅ ADD THIS
+    path("<int:pk>/", ServiceDetailView.as_view()),
 
     # packages
     path("packages/", PackageListView.as_view()),

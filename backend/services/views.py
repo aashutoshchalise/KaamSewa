@@ -32,6 +32,7 @@ class ServiceListView(generics.ListAPIView):
     )
     serializer_class = ServiceSerializer
 
+
 class ServiceDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Service.objects.filter(is_active=True).select_related("category")

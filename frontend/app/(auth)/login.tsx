@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "../../src/store/AuthContext";
 
@@ -14,8 +14,13 @@ export default function LoginScreen() {
     try {
       await login(username, password);
       router.replace("/");
-    } catch (err) {
-      alert("Login failed");
+    } catch (err: any) {
+      console.log("LOGIN ERROR:", err?.response?.data || err.message);
+
+      Alert.alert(
+        "Login failed",
+        JSON.stringify(err?.response?.data || err.message)
+      );
     }
   }
 
@@ -52,7 +57,13 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, justifyContent: "center" },
-  title: { fontSize: 24, marginBottom: 24, textAlign: "center" },
+
+  title: {
+    fontSize: 24,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+
   input: {
     borderWidth: 1,
     borderColor: "#ccc",

@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { getMyBookings, startJob, completeJob } from "../../src/api/bookings";
 import type { Booking } from "../../src/types";
 import { getStatusMeta } from "../../src/utils/status";
 
 export default function WorkerJobs() {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data, isLoading } = useQuery<Booking[]>({
     queryKey: ["worker-my-jobs"],
@@ -61,7 +63,11 @@ export default function WorkerJobs() {
           const statusMeta = getStatusMeta(item.status);
 
           return (
-            <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/(worker)/job/${item.id}`)}
+              activeOpacity={0.9}
+            >
               <Text style={styles.serviceName}>{item.service_name}</Text>
 
               <Text style={styles.price}>
@@ -105,7 +111,7 @@ export default function WorkerJobs() {
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
+            </TouchableOpacity>
           );
         }}
       />

@@ -6,6 +6,7 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../src/store/AuthContext";
@@ -24,7 +25,6 @@ export default function ClientHome() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.avatar}>
@@ -40,7 +40,6 @@ export default function ClientHome() {
           Search and book trusted services near you
         </Text>
 
-        {/* SEARCH BAR */}
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={18} color="#888" />
           <TextInput
@@ -51,14 +50,12 @@ export default function ClientHome() {
         </View>
       </View>
 
-      {/* BANNER */}
       <View style={styles.banner}>
         <Text style={{ color: "#111", fontWeight: "bold" }}>
           Special Offers
         </Text>
       </View>
 
-      {/* SERVICES GRID */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Featured Services</Text>
 
@@ -71,11 +68,14 @@ export default function ClientHome() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}
-              onPress={() =>
-                router.push(`/service/${item.id}`)
-              }
+              onPress={() => router.push(`/service/${item.id}`)}
             >
-              <View style={styles.cardImage} />
+              {item.image ? (
+                <Image source={{ uri: item.image }} style={styles.cardImage} />
+              ) : (
+                <View style={styles.cardImage} />
+              )}
+
               <Text style={styles.cardTitle}>{item.name}</Text>
               <Text style={styles.cardPrice}>
                 Rs. {item.price} / {item.pricing_unit}
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    backgroundColor: "#FFC300", // was orange
+    backgroundColor: "#FFC300",
     padding: 20,
     paddingTop: 60,
     borderBottomLeftRadius: 25,
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
     height: 140,
     margin: 20,
     borderRadius: 18,
-    backgroundColor: "#FFE066", // soft yellow
+    backgroundColor: "#FFE066",
     justifyContent: "center",
     alignItems: "center",
   },

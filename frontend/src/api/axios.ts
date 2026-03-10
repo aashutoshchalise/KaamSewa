@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const baseURL = "http://192.168.1.172:8001"; // <-- make sure this is your CURRENT IP
+const baseURL = "http://192.168.1.192:8001";
 
 export const api = axios.create({
   baseURL,
@@ -11,9 +11,6 @@ export const api = axios.create({
   },
 });
 
-// =======================
-// Token helpers
-// =======================
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";
 
@@ -30,16 +27,13 @@ export const setTokens = async (access: string, refresh: string) => {
 export const clearTokens = () =>
   AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY]);
 
-// =======================
-// Attach token
-// =======================
 api.interceptors.request.use(async (config) => {
   const token = await getAccessToken();
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // ✅ DEBUG LOG
   console.log(
     "➡️ API REQUEST:",
     config.method?.toUpperCase(),
@@ -49,7 +43,6 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-// ✅ DEBUG LOG responses + errors
 api.interceptors.response.use(
   (res) => {
     console.log(

@@ -21,6 +21,12 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
 # =========================
 class ServiceSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    price = serializers.DecimalField(
+        source="base_price",
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
 
     class Meta:
         model = Service
@@ -31,7 +37,9 @@ class ServiceSerializer(serializers.ModelSerializer):
             "category_name",
             "description",
             "base_price",
+            "price",
             "pricing_unit",
+            "image",
             "is_active",
             "created_at",
         ]
