@@ -7,6 +7,12 @@ export type CreateReviewPayload = {
 };
 
 export async function createReview(payload: CreateReviewPayload) {
-  const { data } = await api.post("/api/reviews/", payload);
+  const { booking, rating, comment } = payload;
+
+  const { data } = await api.post(`/api/reviews/${booking}/`, {
+    rating,
+    comment,
+  });
+
   return data;
 }

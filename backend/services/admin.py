@@ -35,3 +35,5 @@ class ServicePackageItemAdmin(admin.ModelAdmin):
     list_display = ("id", "package", "service", "quantity")
     list_filter = ("package",)
     search_fields = ("package__name", "service__name")
+
+

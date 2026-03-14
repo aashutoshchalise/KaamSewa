@@ -29,8 +29,8 @@ export default function ServiceDetail() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F8F8F8" }}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+    <View style={styles.screen}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
         {service.image ? (
           <Image source={{ uri: service.image }} style={styles.image} />
         ) : (
@@ -50,17 +50,39 @@ export default function ServiceDetail() {
         </View>
       </ScrollView>
 
-      <TouchableOpacity
-        style={styles.bookButton}
-        onPress={() => router.push(`/create-booking?serviceId=${service.id}`)}
-      >
-        <Text style={styles.bookText}>Book Now</Text>
-      </TouchableOpacity>
+      <View style={styles.bottomActions}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() =>
+            router.push(
+              `/create-booking?serviceId=${service.id}&mode=negotiation`
+            )
+          }
+        >
+          <Text style={styles.secondaryButtonText}>Negotiate Price</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() =>
+            router.push(
+              `/create-booking?serviceId=${service.id}&mode=base`
+            )
+          }
+        >
+          <Text style={styles.primaryButtonText}>Book at Base Price</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: "#F8F8F8",
+  },
+
   loader: {
     flex: 1,
     justifyContent: "center",
@@ -109,11 +131,15 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  bookButton: {
+  bottomActions: {
     position: "absolute",
     bottom: 20,
     left: 20,
     right: 20,
+    gap: 10,
+  },
+
+  primaryButton: {
     height: 55,
     borderRadius: 18,
     backgroundColor: "#FFC300",
@@ -121,8 +147,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  bookText: {
+  primaryButtonText: {
     color: "#111111",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  secondaryButton: {
+    height: 55,
+    borderRadius: 18,
+    backgroundColor: "#111111",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  secondaryButtonText: {
+    color: "#FFC300",
     fontWeight: "bold",
     fontSize: 16,
   },

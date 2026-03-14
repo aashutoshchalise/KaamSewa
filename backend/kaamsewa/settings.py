@@ -37,6 +37,31 @@ INSTALLED_APPS = [
     "payments",
 ]
 
+JAZZMIN_SETTINGS = {
+    "site_title": "KaamSewa Admin",
+    "site_header": "KaamSewa Administration",
+    "site_brand": "KaamSewa",
+
+    "icons": {
+        "accounts.user": "fas fa-user",
+        "accounts.workerprofile": "fas fa-user-cog",
+        "accounts.clientprofile": "fas fa-user",
+        "services.service": "fas fa-tools",
+        "services.servicecategory": "fas fa-list",
+        "bookings.booking": "fas fa-calendar-check",
+        "reviews.review": "fas fa-star",
+        "payments.payment": "fas fa-credit-card",
+    },
+
+    "order_with_respect_to": [
+        "accounts",
+        "services",
+        "bookings",
+        "reviews",
+        "payments",
+    ],
+}
+
 # =========================
 # CUSTOM USER MODEL
 # =========================

@@ -24,13 +24,16 @@ export type Booking = {
   id: number;
   client: number;
   worker: number | null;
-  service: number;
-  service_name: string;
-  service_price: string;
-  service_pricing_unit: "HOUR" | "FIXED";
+  service: number | null;
+  package?: number | null;
+  service_name: string | null;
+  package_name?: string | null;
+  service_price: string | null;
+  service_pricing_unit: "HOUR" | "FIXED" | null;
   address: string;
   notes: string;
   scheduled_at: string | null;
+  final_price?: string | null;
   status: BookingStatus;
   created_at: string;
   updated_at: string;
@@ -42,5 +45,5 @@ export type Service = {
   description: string;
   price: string;
   pricing_unit: string;
-  image?: string;
+  image?: string | null;
 };

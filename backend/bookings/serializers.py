@@ -8,6 +8,14 @@ class BookingListSerializer(serializers.ModelSerializer):
     service_pricing_unit = serializers.SerializerMethodField()
     package_name = serializers.CharField(source="package.name", read_only=True)
 
+    # latest negotiation info
+    negotiation_id = serializers.SerializerMethodField()
+    negotiated_price = serializers.SerializerMethodField()
+    negotiation_message = serializers.SerializerMethodField()
+    negotiation_status = serializers.SerializerMethodField()
+    negotiation_proposed_by = serializers.SerializerMethodField()
+    negotiation_proposed_by_username = serializers.SerializerMethodField()
+
     class Meta:
         model = Booking
         fields = [
@@ -25,10 +33,30 @@ class BookingListSerializer(serializers.ModelSerializer):
             "scheduled_at",
             "final_price",
             "status",
+            "negotiation_id",
+            "negotiated_price",
+            "negotiation_message",
+            "negotiation_status",
+            "negotiation_proposed_by",
+            "negotiation_proposed_by_username",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "client", "worker", "status", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "client",
+            "worker",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+
+    def _latest_negotiation(self, obj):
+        return (
+            obj.negotiations.order_by("-created_at").first()
+            if hasattr(obj, "negotiations")
+            else BookingNegotiation.objects.filter(booking=obj).order_by("-created_at").first()
+        )
 
     def get_service_name(self, obj):
         if obj.service_id:
@@ -44,6 +72,30 @@ class BookingListSerializer(serializers.ModelSerializer):
         if obj.service_id:
             return obj.service.pricing_unit
         return None
+
+    def get_negotiation_id(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return negotiation.id if negotiation else None
+
+    def get_negotiated_price(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return str(negotiation.proposed_price) if negotiation else None
+
+    def get_negotiation_message(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return negotiation.message if negotiation else None
+
+    def get_negotiation_status(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return negotiation.status if negotiation else None
+
+    def get_negotiation_proposed_by(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return negotiation.proposed_by_id if negotiation else None
+
+    def get_negotiation_proposed_by_username(self, obj):
+        negotiation = self._latest_negotiation(obj)
+        return negotiation.proposed_by.username if negotiation and negotiation.proposed_by else None
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):

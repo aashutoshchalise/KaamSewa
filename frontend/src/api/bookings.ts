@@ -1,6 +1,22 @@
 import { api } from "./axios";
 import type { Booking } from "../types";
 
+export type BookingNegotiation = {
+  id: number;
+  booking?: number;
+  proposed_price: string;
+  message: string;
+  status: "OPEN" | "ACCEPTED" | "REJECTED";
+  proposed_by?: number;
+  proposed_by_username?: string;
+  created_at?: string;
+};
+
+export type CreateNegotiationPayload = {
+  proposed_price: string;
+  message?: string;
+};
+
 /**
  * CLIENT — create booking
  */
@@ -10,10 +26,7 @@ export async function createBooking(payload: {
   notes?: string;
   scheduled_at?: string | null;
 }) {
-  const { data } = await api.post<Booking>(
-    "/api/bookings/create/",
-    payload
-  );
+  const { data } = await api.post<Booking>("/api/bookings/create/", payload);
   return data;
 }
 
@@ -21,9 +34,7 @@ export async function createBooking(payload: {
  * CLIENT or WORKER — get own bookings
  */
 export async function getMyBookings(): Promise<Booking[]> {
-  const { data } = await api.get<Booking[]>(
-    "/api/bookings/my/"
-  );
+  const { data } = await api.get<Booking[]>("/api/bookings/my/");
   return data;
 }
 
@@ -31,9 +42,7 @@ export async function getMyBookings(): Promise<Booking[]> {
  * WORKER — see available jobs
  */
 export async function getAvailableJobs(): Promise<Booking[]> {
-  const { data } = await api.get<Booking[]>(
-    "/api/bookings/available/"
-  );
+  const { data } = await api.get<Booking[]>("/api/bookings/available/");
   return data;
 }
 
@@ -41,8 +50,33 @@ export async function getAvailableJobs(): Promise<Booking[]> {
  * WORKER — claim booking
  */
 export async function claimJob(id: number): Promise<Booking> {
+  const { data } = await api.post<Booking>(`/api/bookings/${id}/claim/`);
+  return data;
+}
+
+/**
+ * CLIENT or WORKER — create negotiation on a booking
+ */
+export async function createNegotiation(
+  bookingId: number,
+  payload: CreateNegotiationPayload
+): Promise<BookingNegotiation> {
+  const { data } = await api.post<BookingNegotiation>(
+    `/api/bookings/${bookingId}/negotiate/`,
+    payload
+  );
+  return data;
+}
+
+/**
+ * CLIENT or WORKER — accept negotiation
+ * Matches backend: /api/bookings/negotiation/<id>/accept/
+ */
+export async function acceptNegotiation(
+  negotiationId: number
+): Promise<Booking> {
   const { data } = await api.post<Booking>(
-    `/api/bookings/${id}/claim/`
+    `/api/bookings/negotiation/${negotiationId}/accept/`
   );
   return data;
 }
@@ -51,9 +85,7 @@ export async function claimJob(id: number): Promise<Booking> {
  * WORKER — start job
  */
 export async function startJob(id: number): Promise<Booking> {
-  const { data } = await api.post<Booking>(
-    `/api/bookings/${id}/start/`
-  );
+  const { data } = await api.post<Booking>(`/api/bookings/${id}/start/`);
   return data;
 }
 
@@ -61,9 +93,7 @@ export async function startJob(id: number): Promise<Booking> {
  * WORKER — complete job
  */
 export async function completeJob(id: number): Promise<Booking> {
-  const { data } = await api.post<Booking>(
-    `/api/bookings/${id}/complete/`
-  );
+  const { data } = await api.post<Booking>(`/api/bookings/${id}/complete/`);
   return data;
 }
 
@@ -75,9 +105,8 @@ export async function updateBookingStatus(
   id: number,
   status: Booking["status"]
 ): Promise<Booking> {
-  const { data } = await api.patch<Booking>(
-    `/api/bookings/${id}/status/`,
-    { status }
-  );
+  const { data } = await api.patch<Booking>(`/api/bookings/${id}/status/`, {
+    status,
+  });
   return data;
 }
