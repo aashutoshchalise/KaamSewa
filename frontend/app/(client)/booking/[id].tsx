@@ -15,9 +15,36 @@ import {
   getMyBookings,
   acceptNegotiation,
   createNegotiation,
+  getBookingEvents,
+  type BookingEvent,
 } from "../../../src/api/bookings";
 import type { Booking } from "../../../src/types";
 import { getStatusMeta } from "../../../src/utils/status";
+
+function formatEventLabel(eventType: string) {
+  return eventType
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatEventDescription(event: BookingEvent) {
+  const metadata = event.metadata || {};
+
+  if (metadata.final_price) {
+    return `Final price: Rs. ${metadata.final_price}`;
+  }
+
+  if (metadata.proposed_price) {
+    return `Proposed price: Rs. ${metadata.proposed_price}`;
+  }
+
+  if (metadata.message) {
+    return String(metadata.message);
+  }
+
+  return event.actor_username ? `By ${event.actor_username}` : "System update";
+}
 
 export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -32,10 +59,16 @@ export default function BookingDetailScreen() {
     queryFn: getMyBookings,
   });
 
+  const { data: events, isLoading: eventsLoading } = useQuery<BookingEvent[]>({
+    queryKey: ["booking-events", id],
+    queryFn: () => getBookingEvents(Number(id)),
+  });
+
   const acceptMutation = useMutation({
     mutationFn: acceptNegotiation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking-events", id] });
       Alert.alert("Offer accepted successfully");
     },
     onError: (err: any) => {
@@ -58,6 +91,7 @@ export default function BookingDetailScreen() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-bookings"] });
+      queryClient.invalidateQueries({ queryKey: ["booking-events", id] });
       setCounterPrice("");
       setCounterMessage("");
       Alert.alert("Counter offer sent successfully");
@@ -95,7 +129,8 @@ export default function BookingDetailScreen() {
   const negotiatedPrice = (currentBooking as any).negotiated_price;
   const negotiationMessage = (currentBooking as any).negotiation_message;
   const negotiationProposedBy = (currentBooking as any).negotiation_proposed_by;
-  const negotiationProposedByUsername = (currentBooking as any).negotiation_proposed_by_username;
+  const negotiationProposedByUsername =
+    (currentBooking as any).negotiation_proposed_by_username;
 
   const hasNegotiation = !!negotiationId;
 
@@ -112,7 +147,8 @@ export default function BookingDetailScreen() {
     Number(negotiationProposedBy) === Number(currentBooking.client);
 
   const isBasePriceFlow =
-    (currentBooking.status === "PENDING" || currentBooking.status === "CLAIMED") &&
+    (currentBooking.status === "PENDING" ||
+      currentBooking.status === "CLAIMED") &&
     !hasNegotiation;
 
   function handleAcceptOffer() {
@@ -149,7 +185,8 @@ export default function BookingDetailScreen() {
 
         <Text style={styles.label}>Base Price</Text>
         <Text style={styles.value}>
-          Rs. {currentBooking.service_price} / {currentBooking.service_pricing_unit}
+          Rs. {currentBooking.service_price} /{" "}
+          {currentBooking.service_pricing_unit}
         </Text>
 
         {currentBooking.final_price ? (
@@ -181,7 +218,9 @@ export default function BookingDetailScreen() {
 
         <Text style={styles.label}>Notes</Text>
         <Text style={styles.value}>
-          {currentBooking.notes?.trim() ? currentBooking.notes : "No notes provided"}
+          {currentBooking.notes?.trim()
+            ? currentBooking.notes
+            : "No notes provided"}
         </Text>
 
         <Text style={styles.label}>Scheduled At</Text>
@@ -229,8 +268,8 @@ export default function BookingDetailScreen() {
           <View style={styles.infoCardInner}>
             <Text style={styles.infoTitle}>Waiting for Worker</Text>
             <Text style={styles.infoText}>
-              Your latest offer has been sent. Please wait for the worker to accept
-              it or send a counter-offer.
+              Your latest offer has been sent. Please wait for the worker to
+              accept it or send a counter-offer.
             </Text>
           </View>
         </View>
@@ -242,7 +281,9 @@ export default function BookingDetailScreen() {
 
           <Text style={styles.label}>Proposed Price</Text>
           <Text style={styles.value}>
-            {negotiatedPrice ? `Rs. ${negotiatedPrice}` : "Price proposal available"}
+            {negotiatedPrice
+              ? `Rs. ${negotiatedPrice}`
+              : "Price proposal available"}
           </Text>
 
           <Text style={styles.label}>Message</Text>
@@ -308,6 +349,40 @@ export default function BookingDetailScreen() {
           </Text>
         </View>
       )}
+
+      {eventsLoading ? (
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Activity Timeline</Text>
+          <ActivityIndicator size="small" color="#FFC300" />
+        </View>
+      ) : events && events.length > 0 ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Activity Timeline</Text>
+
+          {events.map((event, index) => (
+            <View key={event.id} style={styles.timelineRow}>
+              <View style={styles.timelineLeft}>
+                <View style={styles.timelineDot} />
+                {index !== events.length - 1 ? (
+                  <View style={styles.timelineLine} />
+                ) : null}
+              </View>
+
+              <View style={styles.timelineContent}>
+                <Text style={styles.timelineTitle}>
+                  {formatEventLabel(event.event_type)}
+                </Text>
+                <Text style={styles.timelineMeta}>
+                  {new Date(event.created_at).toLocaleString()}
+                </Text>
+                <Text style={styles.timelineDescription}>
+                  {formatEventDescription(event)}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       {currentBooking.status === "COMPLETED" && (
         <TouchableOpacity
@@ -460,6 +535,56 @@ const styles = StyleSheet.create({
 
   infoText: {
     color: "#666666",
+    lineHeight: 20,
+  },
+
+  timelineRow: {
+    flexDirection: "row",
+    marginTop: 14,
+  },
+
+  timelineLeft: {
+    width: 24,
+    alignItems: "center",
+  },
+
+  timelineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#FFC300",
+    marginTop: 4,
+  },
+
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: "#E0E0E0",
+    marginTop: 4,
+  },
+
+  timelineContent: {
+    flex: 1,
+    paddingLeft: 8,
+    paddingBottom: 16,
+  },
+
+  timelineTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  timelineMeta: {
+    fontSize: 12,
+    color: "#888888",
+    marginTop: 2,
+  },
+
+  timelineDescription: {
+    fontSize: 14,
+    color: "#555555",
+    marginTop: 6,
     lineHeight: 20,
   },
 

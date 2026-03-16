@@ -17,6 +17,16 @@ export type CreateNegotiationPayload = {
   message?: string;
 };
 
+export type BookingEvent = {
+  id: number;
+  booking: number;
+  event_type: string;
+  actor: number | null;
+  actor_username?: string | null;
+  metadata?: Record<string, any>;
+  created_at: string;
+};
+
 /**
  * CLIENT — create booking
  */
@@ -70,7 +80,6 @@ export async function createNegotiation(
 
 /**
  * CLIENT or WORKER — accept negotiation
- * Matches backend: /api/bookings/negotiation/<id>/accept/
  */
 export async function acceptNegotiation(
   negotiationId: number
@@ -108,5 +117,13 @@ export async function updateBookingStatus(
   const { data } = await api.patch<Booking>(`/api/bookings/${id}/status/`, {
     status,
   });
+  return data;
+}
+
+/**
+ * CLIENT / WORKER / ADMIN — booking timeline
+ */
+export async function getBookingEvents(id: number): Promise<BookingEvent[]> {
+  const { data } = await api.get<BookingEvent[]>(`/api/bookings/${id}/events/`);
   return data;
 }
