@@ -9,7 +9,11 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../src/store/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getAvailableJobs, claimJob, getMyBookings } from "../../src/api/bookings";
+import {
+  getAvailableJobs,
+  claimJob,
+  getMyBookings,
+} from "../../src/api/bookings";
 import type { Booking } from "../../src/types";
 import { getStatusMeta } from "../../src/utils/status";
 
@@ -17,10 +21,11 @@ export default function WorkerDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: availableJobs, isLoading: loadingAvailable } = useQuery<Booking[]>({
-    queryKey: ["available-jobs"],
-    queryFn: getAvailableJobs,
-  });
+  const { data: availableJobs, isLoading: loadingAvailable } =
+    useQuery<Booking[]>({
+      queryKey: ["available-jobs"],
+      queryFn: getAvailableJobs,
+    });
 
   const { data: myJobs, isLoading: loadingMyJobs } = useQuery<Booking[]>({
     queryKey: ["worker-my-jobs"],
@@ -36,18 +41,15 @@ export default function WorkerDashboard() {
   });
 
   const activeJobs =
-    myJobs?.filter(
-      (job) =>
-        job.status === "CLAIMED" ||
-        job.status === "NEGOTIATING" ||
-        job.status === "ACCEPTED" ||
-        job.status === "IN_PROGRESS"
+    myJobs?.filter((job) =>
+      ["CLAIMED", "NEGOTIATING", "ACCEPTED", "IN_PROGRESS"].includes(job.status)
     ) ?? [];
 
-  const completedJobs = myJobs?.filter((job) => job.status === "COMPLETED") ?? [];
+  const completedJobs =
+    myJobs?.filter((job) => job.status === "COMPLETED") ?? [];
 
   const estimatedIncome = completedJobs.reduce(
-    (sum, job) => sum + Number(job.service_price || 0),
+    (sum, job) => sum + Number(job.final_price || job.service_price || 0),
     0
   );
 
@@ -56,41 +58,56 @@ export default function WorkerDashboard() {
   if (loadingAvailable || loadingMyJobs) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FFC300" />
+        <ActivityIndicator size="large" color="#F4B400" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.greeting}>Hi, {user?.username}</Text>
-      <Text style={styles.subText}>Manage your work and earnings</Text>
+      {/* HERO */}
+      <View style={styles.heroCard}>
+        <Text style={styles.heroTitle}>Welcome back 👋</Text>
+        <Text style={styles.heroName}>{user?.username}</Text>
+        <Text style={styles.heroSub}>Let’s get some work done today</Text>
+      </View>
 
-      <View style={styles.statsRow}>
+      {/* STATS */}
+      <View style={styles.statsGrid}>
         <View style={styles.statCard}>
+          <Ionicons name="briefcase-outline" size={20} color="#F4B400" />
           <Text style={styles.statNumber}>{availableCount}</Text>
-          <Text style={styles.statLabel}>Available Jobs</Text>
+          <Text style={styles.statLabel}>Available</Text>
         </View>
 
         <View style={styles.statCard}>
+          <Ionicons name="time-outline" size={20} color="#3B82F6" />
           <Text style={styles.statNumber}>{activeJobs.length}</Text>
-          <Text style={styles.statLabel}>Active Jobs</Text>
+          <Text style={styles.statLabel}>Active</Text>
         </View>
 
         <View style={styles.statCard}>
+          <Ionicons name="checkmark-done-outline" size={20} color="#22C55E" />
+          <Text style={styles.statNumber}>{completedJobs.length}</Text>
+          <Text style={styles.statLabel}>Completed</Text>
+        </View>
+
+        <View style={styles.statCard}>
+          <Ionicons name="wallet-outline" size={20} color="#F59E0B" />
           <Text style={styles.statNumber}>Rs {estimatedIncome}</Text>
-          <Text style={styles.statLabel}>Estimated Income</Text>
+          <Text style={styles.statLabel}>Earnings</Text>
         </View>
       </View>
 
+      {/* SECTION TITLE */}
       <Text style={styles.sectionTitle}>Available Jobs</Text>
 
       {!availableJobs || availableJobs.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Ionicons name="briefcase-outline" size={40} color="#999" />
-          <Text style={styles.emptyTitle}>No available jobs</Text>
+          <Ionicons name="briefcase-outline" size={48} color="#CBD5E1" />
+          <Text style={styles.emptyTitle}>No jobs available</Text>
           <Text style={styles.emptyText}>
-            New client bookings will appear here.
+            New bookings will appear here soon
           </Text>
         </View>
       ) : (
@@ -105,8 +122,10 @@ export default function WorkerDashboard() {
               <View style={styles.jobCard}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.jobTitle}>{item.service_name}</Text>
+
                   <Text style={styles.jobPrice}>
-                    Rs. {item.service_price} / {item.service_pricing_unit}
+                    Rs. {item.service_price} /{" "}
+                    {item.service_pricing_unit}
                   </Text>
 
                   <View
@@ -144,7 +163,7 @@ export default function WorkerDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F8F8",
+    backgroundColor: "#F8FAFC",
     paddingHorizontal: 20,
     paddingTop: 60,
   },
@@ -153,54 +172,75 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F8F8",
+    backgroundColor: "#F8FAFC",
   },
 
-  greeting: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#111111",
-  },
-
-  subText: {
-    color: "#666666",
-    marginTop: 4,
+  /* HERO */
+  heroCard: {
+    backgroundColor: "#111111",
+    borderRadius: 24,
+    padding: 22,
     marginBottom: 20,
   },
 
-  statsRow: {
+  heroTitle: {
+    color: "#aaa",
+    fontSize: 14,
+  },
+
+  heroName: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+
+  heroSub: {
+    color: "#ccc",
+    marginTop: 6,
+  },
+
+  /* STATS */
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 24,
   },
 
   statCard: {
+    width: "48%",
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: 16,
   },
 
   statNumber: {
-    fontSize: 20,
+    marginTop: 8,
+    fontSize: 18,
     fontWeight: "bold",
-    color: "#111111",
+    color: "#111",
   },
 
   statLabel: {
-    marginTop: 4,
-    color: "#666666",
+    marginTop: 2,
+    color: "#666",
+    fontSize: 13,
   },
 
+  /* SECTION */
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#111111",
+    color: "#111",
     marginBottom: 14,
   },
 
+  /* EMPTY */
   emptyCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    padding: 24,
+    padding: 30,
     alignItems: "center",
   },
 
@@ -208,57 +248,58 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     fontWeight: "bold",
-    color: "#111111",
+    color: "#111",
   },
 
   emptyText: {
     marginTop: 6,
     textAlign: "center",
-    color: "#666666",
+    color: "#666",
   },
 
+  /* JOB CARD */
   jobCard: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     marginBottom: 12,
   },
 
   jobTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#111111",
+    color: "#111",
   },
 
   jobPrice: {
     marginTop: 4,
-    color: "#666666",
+    color: "#666",
   },
 
   statusBadge: {
     alignSelf: "flex-start",
     marginTop: 10,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 999,
   },
 
   statusText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
   },
 
   claimButton: {
-    backgroundColor: "#FFC300",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    backgroundColor: "#F4B400",
+    borderRadius: 14,
+    paddingHorizontal: 18,
     paddingVertical: 10,
   },
 
   claimButtonText: {
-    color: "#111111",
+    color: "#111",
     fontWeight: "bold",
   },
 });

@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  ScrollView,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useMutation } from "@tanstack/react-query";
 import { updateProfileApi } from "../../src/api/auth";
@@ -34,7 +36,7 @@ export default function EditProfileScreen() {
     onSuccess: async () => {
       await refreshMe();
       Alert.alert("Success", "Profile updated successfully");
-      router.back();
+      router.back(); // keeps user in correct flow
     },
     onError: (err: any) => {
       Alert.alert(
@@ -66,96 +68,164 @@ export default function EditProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Edit Profile</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+    >
+      {/* HEADER CARD */}
+      <View style={styles.headerCard}>
+        <View style={styles.iconBox}>
+          <Ionicons name="person-circle-outline" size={26} color="#111" />
+        </View>
 
-      <Text style={styles.label}>Username</Text>
-      <TextInput
-        value={username}
-        onChangeText={setUsername}
-        style={styles.input}
-        placeholder="Enter username"
-        placeholderTextColor="#888"
-      />
-
-      <Text style={styles.label}>Phone</Text>
-      <TextInput
-        value={phone}
-        onChangeText={setPhone}
-        style={styles.input}
-        placeholder="Enter phone number"
-        placeholderTextColor="#888"
-        keyboardType="phone-pad"
-      />
-
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        placeholder="Enter email"
-        placeholderTextColor="#888"
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <TouchableOpacity
-        style={[styles.button, updateMutation.isPending && styles.buttonDisabled]}
-        onPress={handleSave}
-        disabled={updateMutation.isPending}
-      >
-        <Text style={styles.buttonText}>
-          {updateMutation.isPending ? "Saving..." : "Save Changes"}
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerSub}>
+          Update your personal details
         </Text>
-      </TouchableOpacity>
-    </View>
+      </View>
+
+      {/* FORM CARD */}
+      <View style={styles.formCard}>
+        {/* Username */}
+        <Text style={styles.label}>Username</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="person-outline" size={18} color="#666" />
+          <TextInput
+            value={username}
+            onChangeText={setUsername}
+            placeholder="Enter username"
+            placeholderTextColor="#888"
+            style={styles.input}
+          />
+        </View>
+
+        {/* Phone */}
+        <Text style={styles.label}>Phone</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="call-outline" size={18} color="#666" />
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="Enter phone number"
+            placeholderTextColor="#888"
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
+        </View>
+
+        {/* Email */}
+        <Text style={styles.label}>Email</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="mail-outline" size={18} color="#666" />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Enter email"
+            placeholderTextColor="#888"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.input}
+          />
+        </View>
+
+        {/* SAVE BUTTON */}
+        <TouchableOpacity
+          style={[
+            styles.button,
+            updateMutation.isPending && styles.buttonDisabled,
+          ]}
+          onPress={handleSave}
+          disabled={updateMutation.isPending}
+        >
+          <Text style={styles.buttonText}>
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F8F8F8",
+  },
+
+  content: {
     padding: 20,
     paddingTop: 60,
+    paddingBottom: 40,
   },
 
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F8F8",
   },
 
-  title: {
+  headerCard: {
+    backgroundColor: "#111111",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 18,
+  },
+
+  iconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#FFC300",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  headerTitle: {
+    marginTop: 14,
     fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 20,
-    color: "#111111",
+    color: "#FFFFFF",
+  },
+
+  headerSub: {
+    marginTop: 5,
+    color: "#CCCCCC",
+  },
+
+  formCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
   },
 
   label: {
-    fontSize: 14,
-    color: "#666666",
-    marginBottom: 8,
     marginTop: 14,
+    marginBottom: 6,
+    fontSize: 13,
+    color: "#666",
+  },
+
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F2F2F2",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 50,
   },
 
   input: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    flex: 1,
+    marginLeft: 10,
     fontSize: 15,
-    color: "#111111",
+    color: "#111",
   },
 
   button: {
-    marginTop: 30,
+    marginTop: 26,
     backgroundColor: "#FFC300",
-    height: 54,
-    borderRadius: 16,
+    height: 55,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -165,8 +235,8 @@ const styles = StyleSheet.create({
   },
 
   buttonText: {
-    color: "#111111",
     fontWeight: "bold",
     fontSize: 16,
+    color: "#111",
   },
 });

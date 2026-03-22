@@ -38,6 +38,7 @@ export type Booking = {
   package_name?: string | null;
   service_price: string | null;
   service_pricing_unit: "HOUR" | "FIXED" | null;
+
   address: string;
   notes: string;
   scheduled_at: string | null;

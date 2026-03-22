@@ -8,6 +8,7 @@ import {
   Alert,
   TextInput,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -127,7 +128,7 @@ export default function BookingDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#FFC300" />
+        <ActivityIndicator size="large" color="#F4B400" />
       </View>
     );
   }
@@ -169,6 +170,8 @@ export default function BookingDetailScreen() {
       currentBooking.status === "CLAIMED") &&
     !hasNegotiation;
 
+  const displayedPrice = currentBooking.final_price || currentBooking.service_price;
+
   function handleAcceptOffer() {
     if (!negotiationId) {
       Alert.alert("Negotiation not found");
@@ -203,100 +206,161 @@ export default function BookingDetailScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Booking Details</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.heroCard}>
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroIcon}>
+            <Ionicons name="document-text-outline" size={24} color="#111111" />
+          </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Service</Text>
-        <Text style={styles.value}>{currentBooking.service_name}</Text>
-
-        <Text style={styles.label}>Base Price</Text>
-        <Text style={styles.value}>
-          Rs. {currentBooking.service_price} /{" "}
-          {currentBooking.service_pricing_unit}
-        </Text>
-
-        {currentBooking.final_price ? (
-          <>
-            <Text style={styles.label}>Final Agreed Price</Text>
-            <Text style={styles.value}>Rs. {currentBooking.final_price}</Text>
-          </>
-        ) : null}
-
-        <Text style={styles.label}>Status</Text>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: statusMeta.bgColor },
-          ]}
-        >
-          <Text
+          <View
             style={[
-              styles.statusText,
-              { color: statusMeta.textColor },
+              styles.statusBadge,
+              { backgroundColor: statusMeta.bgColor },
             ]}
           >
-            {statusMeta.label}
+            <Text
+              style={[
+                styles.statusText,
+                { color: statusMeta.textColor },
+              ]}
+            >
+              {statusMeta.label}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.heroTitle}>{currentBooking.service_name}</Text>
+        <Text style={styles.heroSubtitle}>Booking Details & Updates</Text>
+
+        <View style={styles.pricePanel}>
+          <Text style={styles.priceLabel}>
+            {currentBooking.final_price ? "Final Agreed Price" : "Base Price"}
+          </Text>
+          <Text style={styles.priceValue}>
+            Rs. {displayedPrice}
+            <Text style={styles.priceUnit}> / {currentBooking.service_pricing_unit}</Text>
           </Text>
         </View>
 
-        <Text style={styles.label}>Address</Text>
-        <Text style={styles.value}>{currentBooking.address}</Text>
+        {currentBooking.final_price &&
+        currentBooking.service_price !== currentBooking.final_price ? (
+          <Text style={styles.originalPriceText}>
+            Original base price: Rs. {currentBooking.service_price} /{" "}
+            {currentBooking.service_pricing_unit}
+          </Text>
+        ) : null}
+      </View>
 
-        <Text style={styles.label}>Notes</Text>
-        <Text style={styles.value}>
-          {currentBooking.notes?.trim()
-            ? currentBooking.notes
-            : "No notes provided"}
-        </Text>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Booking Information</Text>
 
-        <Text style={styles.label}>Scheduled At</Text>
-        <Text style={styles.value}>
-          {currentBooking.scheduled_at
-            ? new Date(currentBooking.scheduled_at).toLocaleString()
-            : "Not scheduled"}
-        </Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="location-outline" size={18} color="#6B7280" />
+          <View style={styles.infoTextWrap}>
+            <Text style={styles.infoLabel}>Address</Text>
+            <Text style={styles.infoValue}>{currentBooking.address}</Text>
+          </View>
+        </View>
 
-        <Text style={styles.label}>Created At</Text>
-        <Text style={styles.value}>
-          {new Date(currentBooking.created_at).toLocaleString()}
-        </Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="document-text-outline" size={18} color="#6B7280" />
+          <View style={styles.infoTextWrap}>
+            <Text style={styles.infoLabel}>Notes</Text>
+            <Text style={styles.infoValue}>
+              {currentBooking.notes?.trim()
+                ? currentBooking.notes
+                : "No notes provided"}
+            </Text>
+          </View>
+        </View>
 
-        <Text style={styles.label}>Booking ID</Text>
-        <Text style={styles.value}>#{currentBooking.id}</Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="time-outline" size={18} color="#6B7280" />
+          <View style={styles.infoTextWrap}>
+            <Text style={styles.infoLabel}>Scheduled At</Text>
+            <Text style={styles.infoValue}>
+              {currentBooking.scheduled_at
+                ? new Date(currentBooking.scheduled_at).toLocaleString()
+                : "Not scheduled"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+          <View style={styles.infoTextWrap}>
+            <Text style={styles.infoLabel}>Created At</Text>
+            <Text style={styles.infoValue}>
+              {new Date(currentBooking.created_at).toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Ionicons name="key-outline" size={18} color="#6B7280" />
+          <View style={styles.infoTextWrap}>
+            <Text style={styles.infoLabel}>Booking ID</Text>
+            <Text style={styles.infoValue}>#{currentBooking.id}</Text>
+          </View>
+        </View>
       </View>
 
       {currentBooking.worker ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Assigned Worker</Text>
 
-          <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>
-            {currentBooking.worker_username || "Not available"}
-          </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="person-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Name</Text>
+              <Text style={styles.infoValue}>
+                {currentBooking.worker_username || "Not available"}
+              </Text>
+            </View>
+          </View>
 
-          <Text style={styles.label}>Phone</Text>
-          <Text style={styles.value}>
-            {currentBooking.worker_phone || "Not available"}
-          </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="call-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Phone</Text>
+              <Text style={styles.infoValue}>
+                {currentBooking.worker_phone || "Not available"}
+              </Text>
+            </View>
+          </View>
 
-          <Text style={styles.label}>Average Rating</Text>
-          <Text style={styles.value}>
-            {currentBooking.worker_avg_rating != null
-              ? `${currentBooking.worker_avg_rating} / 5`
-              : "No ratings yet"}
-          </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="star-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Average Rating</Text>
+              <Text style={styles.infoValue}>
+                {currentBooking.worker_avg_rating != null
+                  ? `${currentBooking.worker_avg_rating} / 5`
+                  : "No ratings yet"}
+              </Text>
+            </View>
+          </View>
 
-          <Text style={styles.label}>Reviews</Text>
-          <Text style={styles.value}>
-            {currentBooking.worker_review_count ?? 0} review(s)
-          </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Reviews</Text>
+              <Text style={styles.infoValue}>
+                {currentBooking.worker_review_count ?? 0} review(s)
+              </Text>
+            </View>
+          </View>
         </View>
       ) : null}
 
       {isBasePriceFlow && (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Base Price Booking</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Base Price Booking</Text>
           <Text style={styles.infoText}>
             You chose to continue with the admin-set base price.
             {currentBooking.status === "PENDING"
@@ -310,22 +374,27 @@ export default function BookingDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Your Offer</Text>
 
-          <Text style={styles.label}>Latest Proposed Price</Text>
-          <Text style={styles.value}>
-            {negotiatedPrice ? `Rs. ${negotiatedPrice}` : "Offer available"}
-          </Text>
-
-          <Text style={styles.label}>Message</Text>
-          <Text style={styles.value}>
-            {negotiationMessage ? negotiationMessage : "No message provided"}
-          </Text>
-
-          <View style={styles.infoCardInner}>
-            <Text style={styles.infoTitle}>Waiting for Worker</Text>
-            <Text style={styles.infoText}>
-              Your latest offer has been sent. Please wait for the worker to
-              accept it or send a counter-offer.
+          <View style={styles.offerBox}>
+            <Text style={styles.offerLabel}>Latest Proposed Price</Text>
+            <Text style={styles.offerValue}>
+              {negotiatedPrice ? `Rs. ${negotiatedPrice}` : "Offer available"}
             </Text>
+
+            <Text style={styles.offerLabel}>Message</Text>
+            <Text style={styles.offerText}>
+              {negotiationMessage ? negotiationMessage : "No message provided"}
+            </Text>
+          </View>
+
+          <View style={styles.waitingCard}>
+            <Ionicons name="hourglass-outline" size={20} color="#F59E0B" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.waitingTitle}>Waiting for Worker</Text>
+              <Text style={styles.waitingText}>
+                Your latest offer has been sent. Please wait for the worker to
+                accept it or send a counter-offer.
+              </Text>
+            </View>
           </View>
         </View>
       )}
@@ -334,29 +403,32 @@ export default function BookingDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Worker Offer</Text>
 
-          <Text style={styles.label}>Proposed Price</Text>
-          <Text style={styles.value}>
-            {negotiatedPrice
-              ? `Rs. ${negotiatedPrice}`
-              : "Price proposal available"}
-          </Text>
+          <View style={styles.offerBox}>
+            <Text style={styles.offerLabel}>Proposed Price</Text>
+            <Text style={styles.offerValue}>
+              {negotiatedPrice
+                ? `Rs. ${negotiatedPrice}`
+                : "Price proposal available"}
+            </Text>
 
-          <Text style={styles.label}>Message</Text>
-          <Text style={styles.value}>
-            {negotiationMessage ? negotiationMessage : "No message provided"}
-          </Text>
+            <Text style={styles.offerLabel}>Message</Text>
+            <Text style={styles.offerText}>
+              {negotiationMessage ? negotiationMessage : "No message provided"}
+            </Text>
 
-          <Text style={styles.label}>Proposed By</Text>
-          <Text style={styles.value}>
-            {negotiationProposedByUsername || "Worker"}
-          </Text>
+            <Text style={styles.offerLabel}>Proposed By</Text>
+            <Text style={styles.offerText}>
+              {negotiationProposedByUsername || "Worker"}
+            </Text>
+          </View>
 
           <TouchableOpacity
-            style={styles.actionButton}
+            style={styles.primaryButton}
             onPress={handleAcceptOffer}
             disabled={acceptMutation.isPending}
           >
-            <Text style={styles.actionButtonText}>
+            <Ionicons name="checkmark-outline" size={18} color="#111111" />
+            <Text style={styles.primaryButtonText}>
               {acceptMutation.isPending ? "Accepting..." : "Accept Offer"}
             </Text>
           </TouchableOpacity>
@@ -386,6 +458,11 @@ export default function BookingDetailScreen() {
             onPress={handleCounterOffer}
             disabled={counterMutation.isPending}
           >
+            <Ionicons
+              name="swap-horizontal-outline"
+              size={18}
+              color="#F4B400"
+            />
             <Text style={styles.secondaryButtonText}>
               {counterMutation.isPending ? "Sending..." : "Send Counter Offer"}
             </Text>
@@ -394,27 +471,33 @@ export default function BookingDetailScreen() {
       )}
 
       {currentBooking.status === "ACCEPTED" && (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Price Finalized</Text>
-          <Text style={styles.infoText}>
-            The price has been agreed. The worker can now start the job.
-          </Text>
+        <View style={styles.infoStateCard}>
+          <Ionicons name="checkmark-circle-outline" size={20} color="#22C55E" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoStateTitle}>Price Finalized</Text>
+            <Text style={styles.infoStateText}>
+              The price has been agreed. The worker can now start the job.
+            </Text>
+          </View>
         </View>
       )}
 
       {currentBooking.status === "IN_PROGRESS" && (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Work in Progress</Text>
-          <Text style={styles.infoText}>
-            Your worker has started this job.
-          </Text>
+        <View style={styles.infoStateCard}>
+          <Ionicons name="construct-outline" size={20} color="#3B82F6" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoStateTitle}>Work in Progress</Text>
+            <Text style={styles.infoStateText}>
+              Your worker has started this job.
+            </Text>
+          </View>
         </View>
       )}
 
       {eventsLoading ? (
-        <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>Activity Timeline</Text>
-          <ActivityIndicator size="small" color="#FFC300" />
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Activity Timeline</Text>
+          <ActivityIndicator size="small" color="#F4B400" />
         </View>
       ) : events && events.length > 0 ? (
         <View style={styles.card}>
@@ -450,28 +533,41 @@ export default function BookingDetailScreen() {
           <Text style={styles.sectionTitle}>Payment Summary</Text>
 
           {paymentLoading ? (
-            <ActivityIndicator size="small" color="#FFC300" />
+            <ActivityIndicator size="small" color="#F4B400" />
           ) : payment ? (
             <>
-              <Text style={styles.label}>Total Price</Text>
-              <Text style={styles.value}>Rs. {payment.amount}</Text>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Total Price</Text>
+                <Text style={styles.paymentValue}>Rs. {payment.amount}</Text>
+              </View>
 
-              <Text style={styles.label}>Platform Fee</Text>
-              <Text style={styles.value}>Rs. {payment.commission_amount}</Text>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Platform Fee</Text>
+                <Text style={styles.paymentValue}>
+                  Rs. {payment.commission_amount}
+                </Text>
+              </View>
 
-              <Text style={styles.label}>Worker Earnings</Text>
-              <Text style={styles.value}>Rs. {payment.worker_earning}</Text>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Worker Earnings</Text>
+                <Text style={styles.paymentValue}>
+                  Rs. {payment.worker_earning}
+                </Text>
+              </View>
 
-              <Text style={styles.label}>Payment Status</Text>
-              <Text style={styles.value}>{payment.status}</Text>
+              <View style={styles.paymentRow}>
+                <Text style={styles.paymentLabel}>Payment Status</Text>
+                <Text style={styles.paymentValue}>{payment.status}</Text>
+              </View>
 
               {payment.status === "PENDING" && (
                 <TouchableOpacity
-                  style={styles.actionButton}
+                  style={styles.primaryButton}
                   onPress={handleConfirmPayment}
                   disabled={confirmPaymentMutation.isPending}
                 >
-                  <Text style={styles.actionButtonText}>
+                  <Ionicons name="wallet-outline" size={18} color="#111111" />
+                  <Text style={styles.primaryButtonText}>
                     {confirmPaymentMutation.isPending
                       ? "Confirming..."
                       : "Confirm Payment"}
@@ -487,10 +583,11 @@ export default function BookingDetailScreen() {
 
       {currentBooking.status === "COMPLETED" && (
         <TouchableOpacity
-          style={styles.rateButton}
+          style={styles.primaryButton}
           onPress={() => router.push(`/(client)/review/${currentBooking.id}`)}
         >
-          <Text style={styles.rateButtonText}>Rate Worker</Text>
+          <Ionicons name="star-outline" size={18} color="#111111" />
+          <Text style={styles.primaryButtonText}>Rate Worker</Text>
         </TouchableOpacity>
       )}
     </ScrollView>
@@ -500,12 +597,12 @@ export default function BookingDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F8F8",
+    backgroundColor: "#F8FAFC",
   },
 
   content: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 50,
     paddingBottom: 40,
   },
 
@@ -513,66 +610,164 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#F8F8F8",
+    backgroundColor: "#F8FAFC",
   },
 
-  title: {
+  heroCard: {
+    backgroundColor: "#111111",
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 18,
+  },
+
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  heroIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 16,
+    backgroundColor: "#F4B400",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  heroTitle: {
+    marginTop: 18,
     fontSize: 22,
     fontWeight: "bold",
-    color: "#111111",
-    marginBottom: 20,
+    color: "#FFFFFF",
+  },
+
+  heroSubtitle: {
+    marginTop: 6,
+    color: "#D1D5DB",
+    fontSize: 14,
+  },
+
+  pricePanel: {
+    backgroundColor: "#1F2937",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 18,
+  },
+
+  priceLabel: {
+    color: "#9CA3AF",
+    fontSize: 13,
+  },
+
+  priceValue: {
+    marginTop: 6,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
+
+  priceUnit: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#D1D5DB",
+  },
+
+  originalPriceText: {
+    marginTop: 12,
+    color: "#D1D5DB",
+    fontSize: 13,
   },
 
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 18,
-  },
-
-  label: {
-    fontSize: 13,
-    color: "#777777",
-    marginTop: 14,
-    marginBottom: 6,
-  },
-
-  value: {
-    fontSize: 16,
-    color: "#111111",
-    fontWeight: "500",
   },
 
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111111",
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    marginTop: 14,
+  },
+
+  infoTextWrap: {
+    flex: 1,
+  },
+
+  infoLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+
+  infoValue: {
+    fontSize: 15,
+    color: "#111111",
+    fontWeight: "500",
+    lineHeight: 21,
   },
 
   statusBadge: {
-    alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    marginTop: 2,
+    alignSelf: "flex-start",
   },
 
   statusText: {
-    fontWeight: "600",
+    fontWeight: "700",
     fontSize: 12,
   },
 
-  actionButton: {
-    marginTop: 18,
-    backgroundColor: "#FFC300",
-    height: 55,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
+  offerBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 18,
+    padding: 16,
+    marginTop: 6,
   },
 
-  actionButtonText: {
+  offerLabel: {
+    marginTop: 10,
+    color: "#6B7280",
+    fontSize: 13,
+  },
+
+  offerValue: {
+    marginTop: 4,
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  offerText: {
+    marginTop: 4,
+    fontSize: 15,
+    color: "#111111",
+    lineHeight: 22,
+  },
+
+  primaryButton: {
+    marginTop: 16,
+    backgroundColor: "#F4B400",
+    height: 56,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  primaryButtonText: {
     color: "#111111",
     fontWeight: "bold",
     fontSize: 16,
@@ -581,26 +776,29 @@ const styles = StyleSheet.create({
   secondaryButton: {
     marginTop: 14,
     backgroundColor: "#111111",
-    height: 55,
-    borderRadius: 16,
+    height: 56,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
   },
 
   secondaryButtonText: {
-    color: "#FFC300",
+    color: "#F4B400",
     fontWeight: "bold",
     fontSize: 16,
   },
 
   helperText: {
-    marginTop: 12,
-    color: "#666666",
+    marginTop: 14,
+    color: "#6B7280",
+    fontSize: 13,
   },
 
   input: {
-    backgroundColor: "#F3F3F3",
-    borderRadius: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
@@ -613,30 +811,56 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
 
-  infoCard: {
+  waitingCard: {
+    marginTop: 16,
+    backgroundColor: "#FFF7ED",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+  },
+
+  waitingTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#9A3412",
+  },
+
+  waitingText: {
+    marginTop: 4,
+    color: "#9A3412",
+    lineHeight: 20,
+    fontSize: 14,
+  },
+
+  infoStateCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    padding: 18,
+    padding: 16,
     marginBottom: 18,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
   },
 
-  infoCardInner: {
-    backgroundColor: "#F8F8F8",
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 16,
-  },
-
-  infoTitle: {
-    fontSize: 17,
+  infoStateTitle: {
+    fontSize: 16,
     fontWeight: "bold",
     color: "#111111",
-    marginBottom: 8,
+  },
+
+  infoStateText: {
+    marginTop: 4,
+    color: "#6B7280",
+    lineHeight: 20,
+    fontSize: 14,
   },
 
   infoText: {
-    color: "#666666",
-    lineHeight: 20,
+    color: "#6B7280",
+    lineHeight: 22,
+    fontSize: 14,
   },
 
   timelineRow: {
@@ -653,14 +877,14 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#FFC300",
+    backgroundColor: "#F4B400",
     marginTop: 4,
   },
 
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: "#E0E0E0",
+    backgroundColor: "#E5E7EB",
     marginTop: 4,
   },
 
@@ -678,29 +902,34 @@ const styles = StyleSheet.create({
 
   timelineMeta: {
     fontSize: 12,
-    color: "#888888",
+    color: "#9CA3AF",
     marginTop: 2,
   },
 
   timelineDescription: {
     fontSize: 14,
-    color: "#555555",
+    color: "#4B5563",
     marginTop: 6,
     lineHeight: 20,
   },
 
-  rateButton: {
-    marginTop: 6,
-    backgroundColor: "#FFC300",
-    height: 55,
-    borderRadius: 16,
-    justifyContent: "center",
+  paymentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
   },
 
-  rateButtonText: {
+  paymentLabel: {
+    fontSize: 14,
+    color: "#6B7280",
+  },
+
+  paymentValue: {
+    fontSize: 15,
+    fontWeight: "700",
     color: "#111111",
-    fontWeight: "bold",
-    fontSize: 16,
   },
 });
