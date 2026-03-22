@@ -15,7 +15,7 @@ import { useAuth } from "../../src/store/AuthContext";
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshMe } = useAuth();
 
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
@@ -31,7 +31,8 @@ export default function EditProfileScreen() {
 
   const updateMutation = useMutation({
     mutationFn: updateProfileApi,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await refreshMe();
       Alert.alert("Success", "Profile updated successfully");
       router.back();
     },
@@ -98,7 +99,11 @@ export default function EditProfileScreen() {
         autoCapitalize="none"
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleSave}>
+      <TouchableOpacity
+        style={[styles.button, updateMutation.isPending && styles.buttonDisabled]}
+        onPress={handleSave}
+        disabled={updateMutation.isPending}
+      >
         <Text style={styles.buttonText}>
           {updateMutation.isPending ? "Saving..." : "Save Changes"}
         </Text>
@@ -106,6 +111,7 @@ export default function EditProfileScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -152,6 +158,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+  },
+
+  buttonDisabled: {
+    opacity: 0.7,
   },
 
   buttonText: {

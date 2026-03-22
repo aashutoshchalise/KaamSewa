@@ -354,8 +354,11 @@ export default function BookingDetailScreen() {
           <TouchableOpacity
             style={styles.actionButton}
             onPress={handleAcceptOffer}
+            disabled={acceptMutation.isPending}
           >
-            <Text style={styles.actionButtonText}>Accept Offer</Text>
+            <Text style={styles.actionButtonText}>
+              {acceptMutation.isPending ? "Accepting..." : "Accept Offer"}
+            </Text>
           </TouchableOpacity>
 
           <Text style={styles.helperText}>or send a counter-offer</Text>
@@ -381,8 +384,11 @@ export default function BookingDetailScreen() {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={handleCounterOffer}
+            disabled={counterMutation.isPending}
           >
-            <Text style={styles.secondaryButtonText}>Send Counter Offer</Text>
+            <Text style={styles.secondaryButtonText}>
+              {counterMutation.isPending ? "Sending..." : "Send Counter Offer"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -463,8 +469,13 @@ export default function BookingDetailScreen() {
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={handleConfirmPayment}
+                  disabled={confirmPaymentMutation.isPending}
                 >
-                  <Text style={styles.actionButtonText}>Confirm Payment</Text>
+                  <Text style={styles.actionButtonText}>
+                    {confirmPaymentMutation.isPending
+                      ? "Confirming..."
+                      : "Confirm Payment"}
+                  </Text>
                 </TouchableOpacity>
               )}
             </>

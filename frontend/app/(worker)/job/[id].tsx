@@ -120,11 +120,12 @@ export default function WorkerJobDetail() {
   const currentJob = job;
   const statusMeta = getStatusMeta(currentJob.status);
 
-  const negotiationId = (currentJob as any).negotiation_id;
-  const negotiatedPrice = (currentJob as any).negotiated_price;
-  const negotiationMessage = (currentJob as any).negotiation_message;
-  const negotiationProposedBy = (currentJob as any).negotiation_proposed_by;
-  const negotiationProposedByUsername = (currentJob as any).negotiation_proposed_by_username;
+  const negotiationId = currentJob.negotiation_id;
+  const negotiatedPrice = currentJob.negotiated_price;
+  const negotiationMessage = currentJob.negotiation_message;
+  const negotiationProposedBy = currentJob.negotiation_proposed_by;
+  const negotiationProposedByUsername =
+    currentJob.negotiation_proposed_by_username;
 
   const hasNegotiation = !!negotiationId;
 
@@ -174,6 +175,13 @@ export default function WorkerJobDetail() {
           Rs {currentJob.service_price} / {currentJob.service_pricing_unit}
         </Text>
 
+        {currentJob.final_price ? (
+          <>
+            <Text style={styles.label}>Final Agreed Price</Text>
+            <Text style={styles.value}>Rs {currentJob.final_price}</Text>
+          </>
+        ) : null}
+
         <Text style={styles.label}>Address</Text>
         <Text style={styles.value}>{currentJob.address}</Text>
 
@@ -207,6 +215,36 @@ export default function WorkerJobDetail() {
         </View>
       </View>
 
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Client Contact</Text>
+
+        <Text style={styles.label}>Name</Text>
+        <Text style={styles.value}>
+          {currentJob.client_username || "Not available"}
+        </Text>
+
+        <Text style={styles.label}>Phone</Text>
+        <Text style={styles.value}>
+          {currentJob.client_phone || "Not available"}
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Your Rating Summary</Text>
+
+        <Text style={styles.label}>Average Rating</Text>
+        <Text style={styles.value}>
+          {currentJob.worker_avg_rating != null
+            ? `${currentJob.worker_avg_rating} / 5`
+            : "No ratings yet"}
+        </Text>
+
+        <Text style={styles.label}>Reviews</Text>
+        <Text style={styles.value}>
+          {currentJob.worker_review_count ?? 0} review(s)
+        </Text>
+      </View>
+
       {isBasePriceFlow && (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Base Price Booking</Text>
@@ -218,8 +256,11 @@ export default function WorkerJobDetail() {
           <TouchableOpacity
             style={styles.button}
             onPress={() => startMutation.mutate(currentJob.id)}
+            disabled={startMutation.isPending}
           >
-            <Text style={styles.buttonText}>Start Job</Text>
+            <Text style={styles.buttonText}>
+              {startMutation.isPending ? "Starting..." : "Start Job"}
+            </Text>
           </TouchableOpacity>
 
           <Text style={styles.helperText}>or send a counter-offer</Text>
@@ -245,8 +286,11 @@ export default function WorkerJobDetail() {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={handleCounterOffer}
+            disabled={negotiationMutation.isPending}
           >
-            <Text style={styles.secondaryButtonText}>Send Counter Offer</Text>
+            <Text style={styles.secondaryButtonText}>
+              {negotiationMutation.isPending ? "Sending..." : "Send Counter Offer"}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -275,8 +319,13 @@ export default function WorkerJobDetail() {
               <TouchableOpacity
                 style={styles.button}
                 onPress={handleAcceptClientOffer}
+                disabled={acceptOfferMutation.isPending}
               >
-                <Text style={styles.buttonText}>Accept Client Offer</Text>
+                <Text style={styles.buttonText}>
+                  {acceptOfferMutation.isPending
+                    ? "Accepting..."
+                    : "Accept Client Offer"}
+                </Text>
               </TouchableOpacity>
 
               <Text style={styles.helperText}>or send a counter-offer</Text>
@@ -302,8 +351,11 @@ export default function WorkerJobDetail() {
               <TouchableOpacity
                 style={styles.secondaryButton}
                 onPress={handleCounterOffer}
+                disabled={negotiationMutation.isPending}
               >
-                <Text style={styles.secondaryButtonText}>Send Counter Offer</Text>
+                <Text style={styles.secondaryButtonText}>
+                  {negotiationMutation.isPending ? "Sending..." : "Send Counter Offer"}
+                </Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -321,8 +373,11 @@ export default function WorkerJobDetail() {
         <TouchableOpacity
           style={styles.button}
           onPress={() => startMutation.mutate(currentJob.id)}
+          disabled={startMutation.isPending}
         >
-          <Text style={styles.buttonText}>Start Job</Text>
+          <Text style={styles.buttonText}>
+            {startMutation.isPending ? "Starting..." : "Start Job"}
+          </Text>
         </TouchableOpacity>
       )}
 
@@ -330,8 +385,11 @@ export default function WorkerJobDetail() {
         <TouchableOpacity
           style={styles.button}
           onPress={() => completeMutation.mutate(currentJob.id)}
+          disabled={completeMutation.isPending}
         >
-          <Text style={styles.buttonText}>Complete Job</Text>
+          <Text style={styles.buttonText}>
+            {completeMutation.isPending ? "Completing..." : "Complete Job"}
+          </Text>
         </TouchableOpacity>
       )}
     </ScrollView>

@@ -1,11 +1,11 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from accounts.models import WorkerProfile
 from .models import Payment
 from .serializers import PaymentSerializer
-from accounts.models import WorkerProfile
 
 
 class PaymentDetailByBookingView(APIView):
@@ -46,7 +46,6 @@ class ConfirmPaymentView(APIView):
             worker_profile = WorkerProfile.objects.select_for_update().get(
                 user=payment.worker
             )
-
             worker_profile.total_earned += payment.worker_earning
             worker_profile.available_balance += payment.worker_earning
             worker_profile.save(update_fields=["total_earned", "available_balance"])

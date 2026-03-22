@@ -20,6 +20,7 @@ type AuthContextType = AuthState & {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -34,19 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function refreshMe() {
     try {
       const me = await meApi();
-  
-      setUser(prev => {
-        if (prev?.id === me.id && prev?.role === me.role) {
-          return prev;
-        }
-        return me;
-      });
-  
-      setRole(prev => {
-        if (prev === me.role) return prev;
-        return me.role;
-      });
-  
+
+      setUser(me);
+      setRole(me.role);
     } catch {
       await AsyncStorage.multiRemove(["access_token", "refresh_token"]);
       setUser(null);
@@ -83,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, role, booting, login, logout, refreshMe }),
+    () => ({ user, role, booting, login, logout, refreshMe, setUser }),
     [user, role, booting]
   );
 
