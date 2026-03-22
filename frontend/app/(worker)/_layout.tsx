@@ -54,6 +54,20 @@ export default function WorkerLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="edit-profile"
+        options={{
+          href: null,
+        }}
+      />
+
+      <Tabs.Screen
+        name="job/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }

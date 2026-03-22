@@ -229,21 +229,42 @@ export default function WorkerJobDetail() {
         </Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Your Rating Summary</Text>
+      {currentJob.review_id ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Review For This Job</Text>
 
-        <Text style={styles.label}>Average Rating</Text>
-        <Text style={styles.value}>
-          {currentJob.worker_avg_rating != null
-            ? `${currentJob.worker_avg_rating} / 5`
-            : "No ratings yet"}
-        </Text>
+          <Text style={styles.label}>Rating</Text>
+          <Text style={styles.value}>
+            {currentJob.review_rating != null
+              ? `${currentJob.review_rating} / 5`
+              : "No rating"}
+          </Text>
 
-        <Text style={styles.label}>Reviews</Text>
-        <Text style={styles.value}>
-          {currentJob.worker_review_count ?? 0} review(s)
-        </Text>
-      </View>
+          <Text style={styles.label}>Comment</Text>
+          <Text style={styles.value}>
+            {currentJob.review_comment?.trim()
+              ? currentJob.review_comment
+              : "No written review"}
+          </Text>
+
+          <Text style={styles.label}>Reviewed By</Text>
+          <Text style={styles.value}>
+            {currentJob.review_client_username || "Client"}
+          </Text>
+
+          <Text style={styles.label}>Reviewed At</Text>
+          <Text style={styles.value}>
+            {currentJob.review_created_at
+              ? new Date(currentJob.review_created_at).toLocaleString()
+              : "Not available"}
+          </Text>
+        </View>
+      ) : currentJob.status === "COMPLETED" ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Review For This Job</Text>
+          <Text style={styles.infoText}>The client has not reviewed this job yet.</Text>
+        </View>
+      ) : null}
 
       {isBasePriceFlow && (
         <View style={styles.card}>

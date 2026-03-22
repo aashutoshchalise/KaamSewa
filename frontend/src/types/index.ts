@@ -51,6 +51,12 @@ export type Booking = {
   negotiation_proposed_by?: number | null;
   negotiation_proposed_by_username?: string | null;
 
+  review_id?: number | null;
+  review_rating?: number | null;
+  review_comment?: string | null;
+  review_created_at?: string | null;
+  review_client_username?: string | null;
+
   created_at: string;
   updated_at: string;
 };

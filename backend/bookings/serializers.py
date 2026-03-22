@@ -28,6 +28,13 @@ class BookingListSerializer(serializers.ModelSerializer):
     worker_avg_rating = serializers.SerializerMethodField()
     worker_review_count = serializers.SerializerMethodField()
 
+    # booking-specific review info
+    review_id = serializers.SerializerMethodField()
+    review_rating = serializers.SerializerMethodField()
+    review_comment = serializers.SerializerMethodField()
+    review_created_at = serializers.SerializerMethodField()
+    review_client_username = serializers.SerializerMethodField()
+
     class Meta:
         model = Booking
         fields = [
@@ -57,6 +64,11 @@ class BookingListSerializer(serializers.ModelSerializer):
             "negotiation_status",
             "negotiation_proposed_by",
             "negotiation_proposed_by_username",
+            "review_id",
+            "review_rating",
+            "review_comment",
+            "review_created_at",
+            "review_client_username",
             "created_at",
             "updated_at",
         ]
@@ -80,6 +92,11 @@ class BookingListSerializer(serializers.ModelSerializer):
         if not obj.worker_id:
             return Review.objects.none()
         return Review.objects.filter(worker_id=obj.worker_id)
+
+    def _booking_review(self, obj):
+        if hasattr(obj, "review"):
+            return obj.review
+        return None
 
     def get_service_name(self, obj):
         return obj.service.name if obj.service_id else None
@@ -138,6 +155,26 @@ class BookingListSerializer(serializers.ModelSerializer):
             return 0
         agg = self._worker_reviews_qs(obj).aggregate(count=Count("id"))
         return agg.get("count", 0)
+
+    def get_review_id(self, obj):
+        review = self._booking_review(obj)
+        return review.id if review else None
+
+    def get_review_rating(self, obj):
+        review = self._booking_review(obj)
+        return review.rating if review else None
+
+    def get_review_comment(self, obj):
+        review = self._booking_review(obj)
+        return review.comment if review else None
+
+    def get_review_created_at(self, obj):
+        review = self._booking_review(obj)
+        return review.created_at if review else None
+
+    def get_review_client_username(self, obj):
+        review = self._booking_review(obj)
+        return review.client.username if review and review.client else None
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
