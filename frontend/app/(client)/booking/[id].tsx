@@ -18,6 +18,11 @@ import {
   getBookingEvents,
   type BookingEvent,
 } from "../../../src/api/bookings";
+import {
+  getPaymentByBooking,
+  confirmPayment,
+  type Payment,
+} from "../../../src/api/payments";
 import type { Booking } from "../../../src/types";
 import { getStatusMeta } from "../../../src/utils/status";
 
@@ -64,6 +69,15 @@ export default function BookingDetailScreen() {
     queryFn: () => getBookingEvents(Number(id)),
   });
 
+  const booking = data?.find((item) => item.id === Number(id));
+
+  const { data: payment, isLoading: paymentLoading } = useQuery<Payment>({
+    queryKey: ["payment-by-booking", id],
+    queryFn: () => getPaymentByBooking(Number(id)),
+    enabled: !!booking && booking.status === "COMPLETED",
+    retry: false,
+  });
+
   const acceptMutation = useMutation({
     mutationFn: acceptNegotiation,
     onSuccess: () => {
@@ -104,6 +118,20 @@ export default function BookingDetailScreen() {
     },
   });
 
+  const confirmPaymentMutation = useMutation({
+    mutationFn: confirmPayment,
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ["payment-by-booking", id] });
+      Alert.alert("Payment confirmed", res.detail);
+    },
+    onError: (err: any) => {
+      Alert.alert(
+        "Could not confirm payment",
+        JSON.stringify(err?.response?.data || err?.message)
+      );
+    },
+  });
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -111,8 +139,6 @@ export default function BookingDetailScreen() {
       </View>
     );
   }
-
-  const booking = data?.find((item) => item.id === Number(id));
 
   if (!booking) {
     return (
@@ -173,6 +199,15 @@ export default function BookingDetailScreen() {
       proposed_price: priceToSend,
       message: counterMessage.trim(),
     });
+  }
+
+  function handleConfirmPayment() {
+    if (!payment) {
+      Alert.alert("Payment not found");
+      return;
+    }
+
+    confirmPaymentMutation.mutate(payment.id);
   }
 
   return (
@@ -383,6 +418,41 @@ export default function BookingDetailScreen() {
           ))}
         </View>
       ) : null}
+
+      {currentBooking.status === "COMPLETED" && (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Payment Summary</Text>
+
+          {paymentLoading ? (
+            <ActivityIndicator size="small" color="#FFC300" />
+          ) : payment ? (
+            <>
+              <Text style={styles.label}>Total Price</Text>
+              <Text style={styles.value}>Rs. {payment.amount}</Text>
+
+              <Text style={styles.label}>Platform Fee</Text>
+              <Text style={styles.value}>Rs. {payment.commission_amount}</Text>
+
+              <Text style={styles.label}>Worker Earnings</Text>
+              <Text style={styles.value}>Rs. {payment.worker_earning}</Text>
+
+              <Text style={styles.label}>Payment Status</Text>
+              <Text style={styles.value}>{payment.status}</Text>
+
+              {payment.status === "PENDING" && (
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleConfirmPayment}
+                >
+                  <Text style={styles.actionButtonText}>Confirm Payment</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          ) : (
+            <Text style={styles.infoText}>Payment not available yet.</Text>
+          )}
+        </View>
+      )}
 
       {currentBooking.status === "COMPLETED" && (
         <TouchableOpacity
