@@ -8,7 +8,10 @@ from .views import (
     AdminApproveWorkerView,
     WorkerProfileMeView,
     RegisterView,
+    ProfileUpdateView,
 )
+
+
 
 urlpatterns = [
     # Auth (client register only)
@@ -26,4 +29,6 @@ urlpatterns = [
 
 
     path("register/", RegisterView.as_view(), name="register"),
+
+    path("me/update/", ProfileUpdateView.as_view(), name="me-update"),
 ]

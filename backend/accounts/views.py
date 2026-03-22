@@ -4,6 +4,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import ProfileUpdateSerializer
+from rest_framework.permissions import IsAuthenticated
+
 
 from .permissions import IsAdmin, IsWorker
 from .serializers import (
@@ -86,3 +89,17 @@ class RegisterView(APIView):
             {"detail": "User registered successfully."},
             status=status.HTTP_201_CREATED,
         )
+
+
+class ProfileUpdateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        serializer = ProfileUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(MeSerializer(request.user).data)

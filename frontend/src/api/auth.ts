@@ -16,7 +16,14 @@ export type LoginResponse = {
 export type RegisterPayload = {
   username: string;
   password: string;
+  phone?: string;
   role: "CLIENT" | "WORKER";
+};
+
+export type UpdateProfilePayload = {
+  username?: string;
+  email?: string;
+  phone?: string;
 };
 
 export type MeResponse = User;
@@ -40,6 +47,11 @@ export async function meApi(): Promise<MeResponse> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
+  return data;
+}
+
+export async function updateProfileApi(payload: UpdateProfilePayload): Promise<MeResponse> {
+  const { data } = await api.patch<MeResponse>("/api/me/update/", payload);
   return data;
 }
 

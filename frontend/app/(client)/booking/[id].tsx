@@ -36,17 +36,9 @@ function formatEventLabel(eventType: string) {
 function formatEventDescription(event: BookingEvent) {
   const metadata = event.metadata || {};
 
-  if (metadata.final_price) {
-    return `Final price: Rs. ${metadata.final_price}`;
-  }
-
-  if (metadata.proposed_price) {
-    return `Proposed price: Rs. ${metadata.proposed_price}`;
-  }
-
-  if (metadata.message) {
-    return String(metadata.message);
-  }
+  if (metadata.final_price) return `Final price: Rs. ${metadata.final_price}`;
+  if (metadata.proposed_price) return `Proposed price: Rs. ${metadata.proposed_price}`;
+  if (metadata.message) return String(metadata.message);
 
   return event.actor_username ? `By ${event.actor_username}` : "System update";
 }
@@ -151,12 +143,12 @@ export default function BookingDetailScreen() {
   const currentBooking = booking;
   const statusMeta = getStatusMeta(currentBooking.status);
 
-  const negotiationId = (currentBooking as any).negotiation_id;
-  const negotiatedPrice = (currentBooking as any).negotiated_price;
-  const negotiationMessage = (currentBooking as any).negotiation_message;
-  const negotiationProposedBy = (currentBooking as any).negotiation_proposed_by;
+  const negotiationId = currentBooking.negotiation_id;
+  const negotiatedPrice = currentBooking.negotiated_price;
+  const negotiationMessage = currentBooking.negotiation_message;
+  const negotiationProposedBy = currentBooking.negotiation_proposed_by;
   const negotiationProposedByUsername =
-    (currentBooking as any).negotiation_proposed_by_username;
+    currentBooking.negotiation_proposed_by_username;
 
   const hasNegotiation = !!negotiationId;
 
@@ -273,6 +265,34 @@ export default function BookingDetailScreen() {
         <Text style={styles.label}>Booking ID</Text>
         <Text style={styles.value}>#{currentBooking.id}</Text>
       </View>
+
+      {currentBooking.worker ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Assigned Worker</Text>
+
+          <Text style={styles.label}>Name</Text>
+          <Text style={styles.value}>
+            {currentBooking.worker_username || "Not available"}
+          </Text>
+
+          <Text style={styles.label}>Phone</Text>
+          <Text style={styles.value}>
+            {currentBooking.worker_phone || "Not available"}
+          </Text>
+
+          <Text style={styles.label}>Average Rating</Text>
+          <Text style={styles.value}>
+            {currentBooking.worker_avg_rating != null
+              ? `${currentBooking.worker_avg_rating} / 5`
+              : "No ratings yet"}
+          </Text>
+
+          <Text style={styles.label}>Reviews</Text>
+          <Text style={styles.value}>
+            {currentBooking.worker_review_count ?? 0} review(s)
+          </Text>
+        </View>
+      ) : null}
 
       {isBasePriceFlow && (
         <View style={styles.infoCard}>

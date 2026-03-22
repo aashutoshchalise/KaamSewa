@@ -12,6 +12,18 @@ class MeSerializer(serializers.ModelSerializer):
         fields = ("id", "username", "email", "phone", "role", "is_worker_approved", "is_staff")
 
 
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("username", "email", "phone")
+
+    def validate_username(self, value):
+        user = self.instance
+        if User.objects.exclude(pk=user.pk).filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists.")
+        return value
+
+
 class RegisterClientSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True)
@@ -68,10 +80,11 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
+    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["username", "password", "role"]
+        fields = ["username", "password", "phone", "role"]
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -92,8 +105,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             **validated_data
         )
 
-        # Auto create WorkerProfile if worker
         if user.role == "WORKER":
             WorkerProfile.objects.create(user=user)
+        elif user.role == "CLIENT":
+            ClientProfile.objects.create(user=user)
 
         return user

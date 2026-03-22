@@ -23,7 +23,15 @@ export type BookingStatus =
 export type Booking = {
   id: number;
   client: number;
+  client_username?: string | null;
+  client_phone?: string | null;
+
   worker: number | null;
+  worker_username?: string | null;
+  worker_phone?: string | null;
+  worker_avg_rating?: number | null;
+  worker_review_count?: number;
+
   service: number | null;
   package?: number | null;
   service_name: string | null;
@@ -35,6 +43,14 @@ export type Booking = {
   scheduled_at: string | null;
   final_price?: string | null;
   status: BookingStatus;
+
+  negotiation_id?: number | null;
+  negotiated_price?: string | null;
+  negotiation_message?: string | null;
+  negotiation_status?: string | null;
+  negotiation_proposed_by?: number | null;
+  negotiation_proposed_by_username?: string | null;
+
   created_at: string;
   updated_at: string;
 };

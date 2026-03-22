@@ -1,5 +1,7 @@
+from django.db.models import Avg, Count
 from rest_framework import serializers
 from .models import Booking, BookingNegotiation, BookingEvent
+from reviews.models import Review
 
 
 class BookingListSerializer(serializers.ModelSerializer):
@@ -8,7 +10,7 @@ class BookingListSerializer(serializers.ModelSerializer):
     service_pricing_unit = serializers.SerializerMethodField()
     package_name = serializers.CharField(source="package.name", read_only=True)
 
-    # latest negotiation info
+    # negotiation info
     negotiation_id = serializers.SerializerMethodField()
     negotiated_price = serializers.SerializerMethodField()
     negotiation_message = serializers.SerializerMethodField()
@@ -16,12 +18,28 @@ class BookingListSerializer(serializers.ModelSerializer):
     negotiation_proposed_by = serializers.SerializerMethodField()
     negotiation_proposed_by_username = serializers.SerializerMethodField()
 
+    # client info
+    client_username = serializers.SerializerMethodField()
+    client_phone = serializers.SerializerMethodField()
+
+    # worker info
+    worker_username = serializers.SerializerMethodField()
+    worker_phone = serializers.SerializerMethodField()
+    worker_avg_rating = serializers.SerializerMethodField()
+    worker_review_count = serializers.SerializerMethodField()
+
     class Meta:
         model = Booking
         fields = [
             "id",
             "client",
+            "client_username",
+            "client_phone",
             "worker",
+            "worker_username",
+            "worker_phone",
+            "worker_avg_rating",
+            "worker_review_count",
             "service",
             "package",
             "service_name",
@@ -58,20 +76,19 @@ class BookingListSerializer(serializers.ModelSerializer):
             else BookingNegotiation.objects.filter(booking=obj).order_by("-created_at").first()
         )
 
+    def _worker_reviews_qs(self, obj):
+        if not obj.worker_id:
+            return Review.objects.none()
+        return Review.objects.filter(worker_id=obj.worker_id)
+
     def get_service_name(self, obj):
-        if obj.service_id:
-            return obj.service.name
-        return None
+        return obj.service.name if obj.service_id else None
 
     def get_service_price(self, obj):
-        if obj.service_id:
-            return str(obj.service.base_price)
-        return None
+        return str(obj.service.base_price) if obj.service_id else None
 
     def get_service_pricing_unit(self, obj):
-        if obj.service_id:
-            return obj.service.pricing_unit
-        return None
+        return obj.service.pricing_unit if obj.service_id else None
 
     def get_negotiation_id(self, obj):
         negotiation = self._latest_negotiation(obj)
@@ -96,6 +113,31 @@ class BookingListSerializer(serializers.ModelSerializer):
     def get_negotiation_proposed_by_username(self, obj):
         negotiation = self._latest_negotiation(obj)
         return negotiation.proposed_by.username if negotiation and negotiation.proposed_by else None
+
+    def get_client_username(self, obj):
+        return obj.client.username if obj.client_id else None
+
+    def get_client_phone(self, obj):
+        return obj.client.phone if obj.client_id else None
+
+    def get_worker_username(self, obj):
+        return obj.worker.username if obj.worker_id else None
+
+    def get_worker_phone(self, obj):
+        return obj.worker.phone if obj.worker_id else None
+
+    def get_worker_avg_rating(self, obj):
+        if not obj.worker_id:
+            return None
+        agg = self._worker_reviews_qs(obj).aggregate(avg=Avg("rating"))
+        avg = agg.get("avg")
+        return round(float(avg), 1) if avg is not None else None
+
+    def get_worker_review_count(self, obj):
+        if not obj.worker_id:
+            return 0
+        agg = self._worker_reviews_qs(obj).aggregate(count=Count("id"))
+        return agg.get("count", 0)
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
