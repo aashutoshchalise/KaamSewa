@@ -1,7 +1,42 @@
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { View, ActivityIndicator } from "react-native";
+import { useAuth } from "../../src/store/AuthContext";
 
 export default function ClientLayout() {
+  const { user, role, booting } = useAuth();
+
+  if (booting) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#F8FAFC",
+        }}
+      >
+        <ActivityIndicator size="large" color="#FFC300" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  if (role !== "CLIENT") {
+    if (role === "WORKER") {
+      return <Redirect href="/(worker)/home" />;
+    }
+
+    if (role === "ADMIN") {
+      return <Redirect href="/(admin)/home" />;
+    }
+
+    return <Redirect href="/(auth)/login" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

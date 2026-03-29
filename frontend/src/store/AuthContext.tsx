@@ -8,11 +8,13 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { login as loginApi, meApi } from "../api/auth";
-import type { User } from "../types";
+import type { MeResponse } from "../api/auth";
+
+type AuthUser = MeResponse;
 
 type AuthState = {
-  user: User | null;
-  role: User["role"] | null;
+  user: AuthUser | null;
+  role: AuthUser["role"] | null;
   booting: boolean;
 };
 
@@ -20,14 +22,14 @@ type AuthContextType = AuthState & {
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setUser: React.Dispatch<React.SetStateAction<AuthUser | null>>;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [role, setRole] = useState<User["role"] | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [role, setRole] = useState<AuthUser["role"] | null>(null);
   const [booting, setBooting] = useState(true);
 
   const initializing = useRef(false);
@@ -35,7 +37,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function refreshMe() {
     try {
       const me = await meApi();
-
       setUser(me);
       setRole(me.role);
     } catch {

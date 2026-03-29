@@ -3,31 +3,24 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { useAuth } from "../../src/store/AuthContext";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import { getMyBookings } from "../../src/api/bookings";
+import { Redirect } from "expo-router";
+import { useAuth } from "../../src/store/AuthContext";
 
-export default function Profile() {
-  const { user, logout } = useAuth();
+export default function ClientProfileScreen() {
   const router = useRouter();
-
-  const { data: bookings } = useQuery({
-    queryKey: ["my-bookings"],
-    queryFn: getMyBookings,
-  });
+  const { user, logout, booting } = useAuth();
 
   async function handleLogout() {
     await logout();
     router.replace("/(auth)/login");
   }
 
-  if (!user) {
+  if (booting) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color="#F4B400" />
@@ -35,22 +28,16 @@ export default function Profile() {
     );
   }
 
-  const totalBookings = bookings?.length ?? 0;
-  const completedBookings =
-    bookings?.filter((booking) => booking.status === "COMPLETED").length ?? 0;
-  const activeBookings =
-    bookings?.filter((booking) =>
-      ["PENDING", "CLAIMED", "NEGOTIATING", "ACCEPTED", "IN_PROGRESS"].includes(
-        booking.status
-      )
-    ).length ?? 0;
+  if (!user) {
+    return (
+      <View style={styles.loader}>
+        <Text style={styles.emptyText}>User not found</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.hero}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -65,74 +52,47 @@ export default function Profile() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Contact Info</Text>
 
-        <View style={styles.infoRow}>
+        <View style={styles.row}>
           <Ionicons name="call-outline" size={18} color="#6B7280" />
-          <Text style={styles.infoText}>
-            {user.phone ? user.phone : "Phone not added"}
-          </Text>
+          <Text style={styles.rowText}>{user.phone || "Phone not added"}</Text>
         </View>
 
-        <View style={styles.infoRow}>
+        <View style={styles.row}>
           <Ionicons name="mail-outline" size={18} color="#6B7280" />
-          <Text style={styles.infoText}>
-            {user.email ? user.email : "Email not added"}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{totalBookings}</Text>
-          <Text style={styles.statLabel}>Total Bookings</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{activeBookings}</Text>
-          <Text style={styles.statLabel}>Active</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{completedBookings}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-
-        <View style={styles.statCard}>
-          <Ionicons name="star-outline" size={22} color="#F4B400" />
-          <Text style={styles.statLabelIcon}>Reviews Ready</Text>
+          <Text style={styles.rowText}>{user.email || "Email not added"}</Text>
         </View>
       </View>
 
       <View style={styles.menuCard}>
-        <TouchableOpacity
-          style={styles.menuRow}
-          onPress={() => router.push("/(client)/bookings")}
-        >
-          <Ionicons name="document-text-outline" size={20} color="#111111" />
-          <Text style={styles.menuText}>My Bookings</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.menuRow}
+        <MenuItem
+          icon="create-outline"
+          label="Edit Profile"
           onPress={() => router.push("/(client)/edit-profile")}
-        >
-          <Ionicons name="create-outline" size={20} color="#111111" />
-          <Text style={styles.menuText}>Edit Profile</Text>
-        </TouchableOpacity>
+        />
 
-        <TouchableOpacity
-          style={styles.menuRow}
-          onPress={() => Alert.alert("Coming Soon", "Delete account feature")}
-        >
-          <Ionicons name="trash-outline" size={20} color="#111111" />
-          <Text style={styles.menuText}>Delete Account</Text>
-        </TouchableOpacity>
+        <MenuItem
+          icon="document-text-outline"
+          label="My Bookings"
+          onPress={() => router.push("/(client)/bookings")}
+        />
 
-        <TouchableOpacity style={styles.menuRow} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#F4B400" />
-          <Text style={[styles.menuText, { color: "#F4B400" }]}>Logout</Text>
-        </TouchableOpacity>
+        <MenuItem
+          icon="log-out-outline"
+          label="Logout"
+          color="#F4B400"
+          onPress={handleLogout}
+        />
       </View>
     </ScrollView>
+  );
+}
+
+function MenuItem({ icon, label, onPress, color = "#111111" }: any) {
+  return (
+    <TouchableOpacity style={styles.menuRow} onPress={onPress}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={[styles.menuText, { color }]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -153,6 +113,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
+  },
+
+  emptyText: {
+    color: "#6B7280",
+    fontSize: 15,
   },
 
   hero: {
@@ -188,7 +153,6 @@ const styles = StyleSheet.create({
   role: {
     marginTop: 4,
     color: "#9CA3AF",
-    fontSize: 14,
   },
 
   card: {
@@ -201,57 +165,20 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#111111",
     marginBottom: 10,
+    color: "#111111",
   },
 
-  infoRow: {
+  row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     marginTop: 10,
   },
 
-  infoText: {
+  rowText: {
+    color: "#111111",
     fontSize: 15,
-    color: "#111111",
-  },
-
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 18,
-  },
-
-  statCard: {
-    width: "48%",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    padding: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 95,
-  },
-
-  statNumber: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#111111",
-  },
-
-  statLabel: {
-    marginTop: 6,
-    color: "#6B7280",
-    fontSize: 13,
-    textAlign: "center",
-  },
-
-  statLabelIcon: {
-    marginTop: 8,
-    color: "#6B7280",
-    fontSize: 13,
-    textAlign: "center",
   },
 
   menuCard: {
@@ -270,7 +197,6 @@ const styles = StyleSheet.create({
 
   menuText: {
     fontSize: 16,
-    color: "#111111",
     fontWeight: "500",
   },
 });

@@ -128,7 +128,7 @@ class WorkerWalletSummaryView(APIView):
             status=status.HTTP_200_OK,
         )
 
-        
+
 
 class VerifyKhaltiPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -254,3 +254,39 @@ class MyWithdrawalsView(APIView):
     def get(self, request):
         qs = WithdrawalRequest.objects.filter(worker=request.user).order_by("-created_at")
         return Response(WithdrawalRequestSerializer(qs, many=True).data)
+
+
+class UpdateWithdrawalStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, withdrawal_id: int):
+        if getattr(request.user, "role", "") != "ADMIN":
+            return Response({"detail": "Only admin can update withdrawals."}, status=403)
+
+        withdrawal = WithdrawalRequest.objects.filter(id=withdrawal_id).first()
+        if not withdrawal:
+            return Response({"detail": "Withdrawal not found."}, status=404)
+
+        new_status = request.data.get("status")
+
+        if new_status not in [
+            WithdrawalRequest.Status.APPROVED,
+            WithdrawalRequest.Status.REJECTED,
+        ]:
+            return Response({"detail": "Invalid status."}, status=400)
+
+        if withdrawal.status != WithdrawalRequest.Status.PENDING:
+            return Response({"detail": "Withdrawal already processed."}, status=400)
+
+        with transaction.atomic():
+            withdrawal.status = new_status
+            withdrawal.save(update_fields=["status"])
+
+            if new_status == WithdrawalRequest.Status.REJECTED:
+                worker_profile = WorkerProfile.objects.select_for_update().get(
+                    user=withdrawal.worker
+                )
+                worker_profile.available_balance += withdrawal.amount
+                worker_profile.save(update_fields=["available_balance"])
+
+        return Response({"detail": f"Withdrawal {new_status.lower()}."}, status=200)

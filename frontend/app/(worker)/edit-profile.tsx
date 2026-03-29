@@ -22,12 +22,16 @@ export default function EditProfileScreen() {
   const [username, setUsername] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [khaltiNumber, setKhaltiNumber] = useState("");
+  const [bankAccountNumber, setBankAccountNumber] = useState("");
 
   useEffect(() => {
     if (user) {
       setUsername(user.username || "");
       setPhone(user.phone || "");
       setEmail(user.email || "");
+      setKhaltiNumber((user as any).khalti_number || "");
+      setBankAccountNumber((user as any).bank_account_number || "");
     }
   }, [user]);
 
@@ -36,7 +40,7 @@ export default function EditProfileScreen() {
     onSuccess: async () => {
       await refreshMe();
       Alert.alert("Success", "Profile updated successfully");
-      router.back(); // keeps user in correct flow
+      router.back();
     },
     onError: (err: any) => {
       Alert.alert(
@@ -60,10 +64,17 @@ export default function EditProfileScreen() {
       return;
     }
 
+    if (!phone.trim()) {
+      Alert.alert("Phone number is required");
+      return;
+    }
+
     updateMutation.mutate({
       username: username.trim(),
       phone: phone.trim(),
       email: email.trim(),
+      khalti_number: khaltiNumber.trim(),
+      bank_account_number: bankAccountNumber.trim(),
     });
   }
 
@@ -71,8 +82,8 @@ export default function EditProfileScreen() {
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
     >
-      {/* HEADER CARD */}
       <View style={styles.headerCard}>
         <View style={styles.iconBox}>
           <Ionicons name="person-circle-outline" size={26} color="#111" />
@@ -80,13 +91,13 @@ export default function EditProfileScreen() {
 
         <Text style={styles.headerTitle}>Edit Profile</Text>
         <Text style={styles.headerSub}>
-          Update your personal details
+          Update your personal and payout details
         </Text>
       </View>
 
-      {/* FORM CARD */}
       <View style={styles.formCard}>
-        {/* Username */}
+        <Text style={styles.sectionTitle}>Personal Details</Text>
+
         <Text style={styles.label}>Username</Text>
         <View style={styles.inputWrap}>
           <Ionicons name="person-outline" size={18} color="#666" />
@@ -99,7 +110,6 @@ export default function EditProfileScreen() {
           />
         </View>
 
-        {/* Phone */}
         <Text style={styles.label}>Phone</Text>
         <View style={styles.inputWrap}>
           <Ionicons name="call-outline" size={18} color="#666" />
@@ -113,7 +123,6 @@ export default function EditProfileScreen() {
           />
         </View>
 
-        {/* Email */}
         <Text style={styles.label}>Email</Text>
         <View style={styles.inputWrap}>
           <Ionicons name="mail-outline" size={18} color="#666" />
@@ -128,7 +137,33 @@ export default function EditProfileScreen() {
           />
         </View>
 
-        {/* SAVE BUTTON */}
+        <Text style={styles.sectionTitlePayout}>Payout Details</Text>
+
+        <Text style={styles.label}>Khalti Number</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="phone-portrait-outline" size={18} color="#666" />
+          <TextInput
+            value={khaltiNumber}
+            onChangeText={setKhaltiNumber}
+            placeholder="Enter Khalti mobile number"
+            placeholderTextColor="#888"
+            keyboardType="phone-pad"
+            style={styles.input}
+          />
+        </View>
+
+        <Text style={styles.label}>Bank Account Number</Text>
+        <View style={styles.inputWrap}>
+          <Ionicons name="card-outline" size={18} color="#666" />
+          <TextInput
+            value={bankAccountNumber}
+            onChangeText={setBankAccountNumber}
+            placeholder="Enter bank account number"
+            placeholderTextColor="#888"
+            style={styles.input}
+          />
+        </View>
+
         <TouchableOpacity
           style={[
             styles.button,
@@ -196,6 +231,21 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 18,
+  },
+
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111111",
+    marginBottom: 6,
+  },
+
+  sectionTitlePayout: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#111111",
+    marginTop: 22,
+    marginBottom: 6,
   },
 
   label: {

@@ -47,8 +47,8 @@ export default function WorkerProfileScreen() {
   let ratingCount = 0;
 
   allJobs.forEach((job) => {
-    if (job.review_rating != null) {
-      ratingSum += Number(job.review_rating);
+    if ((job as any).review_rating != null) {
+      ratingSum += Number((job as any).review_rating);
       ratingCount += 1;
     }
   });
@@ -58,8 +58,6 @@ export default function WorkerProfileScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      
-      {/* HERO */}
       <View style={styles.hero}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>
@@ -79,26 +77,44 @@ export default function WorkerProfileScreen() {
         </View>
       </View>
 
-      {/* CONTACT */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Contact Info</Text>
 
         <View style={styles.row}>
           <Ionicons name="call-outline" size={18} color="#6B7280" />
-          <Text style={styles.rowText}>
-            {user.phone || "Phone not added"}
-          </Text>
+          <Text style={styles.rowText}>{user.phone || "Phone not added"}</Text>
         </View>
 
         <View style={styles.row}>
           <Ionicons name="mail-outline" size={18} color="#6B7280" />
-          <Text style={styles.rowText}>
-            {user.email || "Email not added"}
-          </Text>
+          <Text style={styles.rowText}>{user.email || "Email not added"}</Text>
         </View>
       </View>
 
-      {/* STATS */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Payout Details</Text>
+
+        <View style={styles.row}>
+          <Ionicons name="phone-portrait-outline" size={18} color="#6B7280" />
+          <View style={styles.rowTextWrap}>
+            <Text style={styles.rowLabel}>Khalti Number</Text>
+            <Text style={styles.rowText}>
+              {(user as any).khalti_number || "Khalti number not added"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <Ionicons name="card-outline" size={18} color="#6B7280" />
+          <View style={styles.rowTextWrap}>
+            <Text style={styles.rowLabel}>Bank Account Number</Text>
+            <Text style={styles.rowText}>
+              {(user as any).bank_account_number || "Bank account not added"}
+            </Text>
+          </View>
+        </View>
+      </View>
+
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{totalJobs}</Text>
@@ -121,7 +137,6 @@ export default function WorkerProfileScreen() {
         </View>
       </View>
 
-      {/* MENU */}
       <View style={styles.menuCard}>
         <MenuItem
           icon="briefcase-outline"
@@ -159,7 +174,6 @@ export default function WorkerProfileScreen() {
   );
 }
 
-/* MENU ITEM COMPONENT */
 function MenuItem({ icon, label, onPress, color = "#111111" }: any) {
   return (
     <TouchableOpacity style={styles.menuRow} onPress={onPress}>
@@ -179,7 +193,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  /* HERO */
   hero: {
     backgroundColor: "#111111",
     borderRadius: 26,
@@ -232,7 +245,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  /* CARD */
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -249,9 +261,19 @@ const styles = StyleSheet.create({
 
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     marginTop: 10,
+  },
+
+  rowTextWrap: {
+    flex: 1,
+  },
+
+  rowLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 3,
   },
 
   rowText: {
@@ -259,7 +281,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  /* STATS */
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -286,7 +307,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
 
-  /* MENU */
   menuCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,

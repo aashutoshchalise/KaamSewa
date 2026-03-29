@@ -1,7 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    RegisterClientView,
     LoginView,
     MeView,
     AdminCreateWorkerView,
@@ -11,24 +10,15 @@ from .views import (
     ProfileUpdateView,
 )
 
-
-
 urlpatterns = [
-    # Auth (client register only)
-    path("auth/register/", RegisterClientView.as_view()),
+    path("auth/register/", RegisterView.as_view(), name="register"),
     path("auth/login/", LoginView.as_view()),
     path("auth/refresh/", TokenRefreshView.as_view()),
-    path("me/", MeView.as_view()),
+    path("auth/me/", MeView.as_view()),
+    path("auth/me/update/", ProfileUpdateView.as_view(), name="me-update"),
 
-    # Admin worker management
     path("admin/workers/create/", AdminCreateWorkerView.as_view()),
     path("admin/workers/<int:user_id>/approve/", AdminApproveWorkerView.as_view()),
 
-    # Worker profile
     path("worker/profile/", WorkerProfileMeView.as_view()),
-
-
-    path("register/", RegisterView.as_view(), name="register"),
-
-    path("me/update/", ProfileUpdateView.as_view(), name="me-update"),
 ]

@@ -13,6 +13,7 @@ class WorkerSkill(models.Model):
 
 
 class CustomUser(AbstractUser):
+    
     ROLE_CHOICES = (
         ("ADMIN", "Admin"),
         ("WORKER", "Worker"),
@@ -22,6 +23,8 @@ class CustomUser(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="CLIENT")
     is_worker_approved = models.BooleanField(default=False)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    khalti_number = models.CharField(max_length=20, blank=True, null=True)
+    bank_account_number = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return f"{self.username} ({self.role})"

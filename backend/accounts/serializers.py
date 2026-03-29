@@ -9,13 +9,29 @@ User = get_user_model()
 class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "username", "email", "phone", "role", "is_worker_approved", "is_staff")
+        fields = (
+            "id",
+            "username",
+            "email",
+            "phone",
+            "role",
+            "is_worker_approved",
+            "is_staff",
+            "khalti_number",
+            "bank_account_number",
+        )
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("username", "email", "phone")
+        fields = (
+            "username",
+            "email",
+            "phone",
+            "khalti_number",
+            "bank_account_number",
+        )
 
     def validate_username(self, value):
         user = self.instance
@@ -37,20 +53,19 @@ class RegisterClientSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"password": "Passwords do not match"})
         return attrs
 
-    def create(self, validated_data):
-        validated_data.pop("password2")
-        password = validated_data.pop("password")
+def create(self, validated_data):
+    validated_data.pop("password2")
+    password = validated_data.pop("password")
 
-        user = User.objects.create(
-            **validated_data,
-            role="CLIENT",
-            is_active=True,
-        )
-        user.set_password(password)
-        user.save()
+    user = User.objects.create(
+        **validated_data,
+        role="CLIENT",
+        is_active=True,
+    )
+    user.set_password(password)
+    user.save()
 
-        ClientProfile.objects.create(user=user)
-        return user
+    return user
 
 
 class WorkerCreateByAdminSerializer(serializers.ModelSerializer):
@@ -60,13 +75,15 @@ class WorkerCreateByAdminSerializer(serializers.ModelSerializer):
         model = User
         fields = ("username", "email", "phone", "password")
 
-    def create(self, validated_data):
-        password = validated_data.pop("password")
-        user = User.objects.create(**validated_data, role="WORKER", is_worker_approved=False)
-        user.set_password(password)
-        user.save()
-        WorkerProfile.objects.create(user=user)
-        return user
+def create(self, validated_data):
+    password = validated_data.pop("password")
+
+    user = User.objects.create_user(
+        password=password,
+        **validated_data
+    )
+
+    return user
 
 
 class WorkerProfileSerializer(serializers.ModelSerializer):
@@ -80,11 +97,20 @@ class WorkerProfileSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
-    phone = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    phone = serializers.CharField(required=True, allow_blank=False)
+    khalti_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    bank_account_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ["username", "password", "phone", "role"]
+        fields = [
+            "username",
+            "password",
+            "phone",
+            "role",
+            "khalti_number",
+            "bank_account_number",
+        ]
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -92,22 +118,35 @@ class RegisterSerializer(serializers.ModelSerializer):
         return value
 
     def validate_role(self, value):
-        allowed_roles = ["CLIENT", "WORKER", "ADMIN"]
+        allowed_roles = ["CLIENT", "WORKER"]
         if value not in allowed_roles:
             raise serializers.ValidationError("Invalid role.")
         return value
 
-    def create(self, validated_data):
-        password = validated_data.pop("password")
+    def validate(self, attrs):
+        role = attrs.get("role")
+        khalti_number = attrs.get("khalti_number")
+        bank_account_number = attrs.get("bank_account_number")
 
-        user = User.objects.create_user(
-            password=password,
-            **validated_data
-        )
+        if role == "WORKER":
+            if not khalti_number:
+                raise serializers.ValidationError(
+                    {"khalti_number": "Khalti number is required for workers."}
+                )
+            if not bank_account_number:
+                raise serializers.ValidationError(
+                    {"bank_account_number": "Bank account number is required for workers."}
+                )
 
-        if user.role == "WORKER":
-            WorkerProfile.objects.create(user=user)
-        elif user.role == "CLIENT":
-            ClientProfile.objects.create(user=user)
+        return attrs
 
-        return user
+def create(self, validated_data):
+    password = validated_data.pop("password")
+    user = User.objects.create(
+        **validated_data,
+        role="WORKER",
+        is_worker_approved=False
+    )
+    user.set_password(password)
+    user.save()
+    return user
