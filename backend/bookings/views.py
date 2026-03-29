@@ -352,9 +352,11 @@ class CompleteJobView(APIView):
             booking.status = Booking.Status.COMPLETED
             booking.save(update_fields=["status", "updated_at"])
 
-            if not hasattr(booking, "payment"):
-                commission_rate = Decimal("0.10")
-                total_amount = get_booking_amount(booking)
+            payment = Payment.objects.filter(booking=booking).first()
+
+            if not payment:
+                total_amount = get_booking_amount(booking).quantize(Decimal("0.01"))
+                commission_rate = Decimal("0.20")
                 commission_amount = (total_amount * commission_rate).quantize(Decimal("0.01"))
                 worker_earning = (total_amount - commission_amount).quantize(Decimal("0.01"))
 
@@ -365,7 +367,10 @@ class CompleteJobView(APIView):
                     amount=total_amount,
                     commission_amount=commission_amount,
                     worker_earning=worker_earning,
+                    method=Payment.Method.CASH,
                     status=Payment.Status.PENDING,
+                    khalti_pidx=None,
+                    transaction_reference="",
                 )
 
         return Response(BookingListSerializer(booking).data, status=200)

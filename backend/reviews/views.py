@@ -15,6 +15,17 @@ from .serializers import ReviewCreateSerializer, ReviewSerializer
 def role_of(user) -> str:
     return (getattr(user, "role", "") or "").upper().strip()
 
+class PaymentDetailByBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, booking_id: int):
+        payment = Payment.objects.filter(booking_id=booking_id).first()
+
+        if not payment:
+            return Response({"detail": "Payment not found."}, status=404)
+
+        return Response(PaymentSerializer(payment).data, status=200)
+
 
 class CreateReviewView(APIView):
     permission_classes = [IsAuthenticated]

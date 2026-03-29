@@ -6,21 +6,14 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Ionicons } from "@expo/vector-icons";
 import { createBooking, createNegotiation } from "../src/api/bookings";
-
-const timeSlots = [
-  "8AM - 9AM",
-  "9AM - 10AM",
-  "10AM - 11AM",
-  "11AM - 12PM",
-  "12PM - 1PM",
-  "1PM - 2PM",
-  "2PM - 3PM",
-  "3PM - 4PM",
-];
+import MapPicker from "../components/MapPicker";
 
 export default function CreateBooking() {
   const { serviceId, mode } = useLocalSearchParams();
@@ -28,24 +21,75 @@ export default function CreateBooking() {
 
   const bookingMode = mode === "negotiation" ? "negotiation" : "base";
 
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
 
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
 
-  const today = new Date();
-  const dates = Array.from({ length: 5 }).map((_, i) => {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const [pickedCoords, setPickedCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const minDate = useMemo(() => {
     const d = new Date();
-    d.setDate(today.getDate() + i);
+    d.setHours(0, 0, 0, 0);
     return d;
-  });
+  }, []);
+
+  function formatDate(date: Date) {
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  }
+
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
+  function combineDateAndTime(datePart: Date, timePart: Date) {
+    const combined = new Date(datePart);
+    combined.setHours(timePart.getHours(), timePart.getMinutes(), 0, 0);
+    return combined;
+  }
+
+  function handleDateChange(_: any, date?: Date) {
+    setShowDatePicker(false);
+    if (date) {
+      const normalized = new Date(date);
+      normalized.setHours(0, 0, 0, 0);
+      setSelectedDate(normalized);
+    }
+  }
+
+  function handleTimeChange(_: any, time?: Date) {
+    setShowTimePicker(false);
+    if (time) {
+      setSelectedTime(time);
+    }
+  }
 
   async function handleBooking() {
-    if (!selectedDate || !selectedTime || !address) {
-      Alert.alert("Please complete all required fields");
+    if (!serviceId) {
+      Alert.alert("Service not found");
+      return;
+    }
+
+    if (!address.trim()) {
+      Alert.alert("Address is required");
       return;
     }
 
@@ -54,12 +98,24 @@ export default function CreateBooking() {
       return;
     }
 
+    const scheduledAt = combineDateAndTime(selectedDate, selectedTime);
+    const now = new Date();
+
+    if (scheduledAt <= now) {
+      Alert.alert("Please choose a future date and time");
+      return;
+    }
+
     try {
+      const finalAddress = pickedCoords
+        ? `${address.trim()} (${pickedCoords.lat}, ${pickedCoords.lng})`
+        : address.trim();
+
       const booking = await createBooking({
         service: Number(serviceId),
-        address,
-        notes,
-        scheduled_at: new Date(selectedDate).toISOString(),
+        address: finalAddress,
+        notes: notes.trim(),
+        scheduled_at: scheduledAt.toISOString(),
       });
 
       if (bookingMode === "negotiation") {
@@ -68,9 +124,15 @@ export default function CreateBooking() {
           message: offerMessage.trim(),
         });
 
-        Alert.alert("Offer sent", "Your booking was created and your price offer was sent.");
+        Alert.alert(
+          "Offer sent",
+          "Your booking was created and your price offer was sent."
+        );
       } else {
-        Alert.alert("Booking Created!", "Your booking was created at the base price.");
+        Alert.alert(
+          "Booking Created",
+          "Your booking was created successfully at the base price."
+        );
       }
 
       router.replace("/(client)/bookings");
@@ -82,118 +144,191 @@ export default function CreateBooking() {
     }
   }
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>
-        {bookingMode === "negotiation" ? "Negotiate Service" : "Schedule Service"}
-      </Text>
+  const finalScheduledPreview = combineDateAndTime(selectedDate, selectedTime);
 
-      {bookingMode === "negotiation" && (
-        <View style={styles.modeCard}>
-          <Text style={styles.modeTitle}>Negotiation Mode</Text>
-          <Text style={styles.modeText}>
-            Enter your preferred offer price. The worker can accept or counter it.
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.heroCard}>
+        <View style={styles.heroIcon}>
+          <Ionicons
+            name={
+              bookingMode === "negotiation"
+                ? "swap-horizontal-outline"
+                : "calendar-outline"
+            }
+            size={24}
+            color="#111111"
+          />
+        </View>
+
+        <Text style={styles.title}>
+          {bookingMode === "negotiation" ? "Negotiate Service" : "Schedule Service"}
+        </Text>
+
+        <Text style={styles.subtitle}>
+          {bookingMode === "negotiation"
+            ? "Set your schedule and send an offer price to the worker."
+            : "Choose your preferred schedule and confirm at the base price."}
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Pick Service Location</Text>
+        <Text style={styles.sectionHint}>
+          Tap on the map to select the location, then confirm the address below.
+        </Text>
+
+        <MapPicker
+          onLocationSelect={(lat, lng) => {
+            setPickedCoords({ lat, lng });
+            if (!address.trim()) {
+              setAddress(`${lat}, ${lng}`);
+            }
+          }}
+        />
+
+        {pickedCoords ? (
+          <View style={styles.previewCard}>
+            <Ionicons name="location-outline" size={18} color="#15803D" />
+            <Text style={styles.previewText}>
+              Selected coordinates:{" "}
+              <Text style={styles.previewStrong}>
+                {pickedCoords.lat}, {pickedCoords.lng}
+              </Text>
+            </Text>
+          </View>
+        ) : null}
+
+        <TextInput
+          placeholder="Enter full service address"
+          placeholderTextColor="#888"
+          style={[styles.input, { marginTop: 14 }]}
+          value={address}
+          onChangeText={setAddress}
+          multiline
+        />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Schedule</Text>
+        <Text style={styles.sectionHint}>
+          Pick a date and time that works best for you.
+        </Text>
+
+        <View style={styles.scheduleRow}>
+          <TouchableOpacity
+            style={styles.scheduleBox}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Ionicons name="calendar-outline" size={18} color="#111111" />
+            <View style={styles.scheduleTextWrap}>
+              <Text style={styles.scheduleLabel}>Date</Text>
+              <Text style={styles.scheduleValue}>{formatDate(selectedDate)}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.scheduleBox}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Ionicons name="time-outline" size={18} color="#111111" />
+            <View style={styles.scheduleTextWrap}>
+              <Text style={styles.scheduleLabel}>Time</Text>
+              <Text style={styles.scheduleValue}>{formatTime(selectedTime)}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            minimumDate={minDate}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleDateChange}
+          />
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={selectedTime}
+            mode="time"
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={handleTimeChange}
+          />
+        )}
+
+        <View style={styles.previewCard}>
+          <Ionicons name="checkmark-circle-outline" size={18} color="#15803D" />
+          <Text style={styles.previewText}>
+            Scheduled for{" "}
+            <Text style={styles.previewStrong}>
+              {finalScheduledPreview.toLocaleString()}
+            </Text>
           </Text>
         </View>
-      )}
-
-      <Text style={styles.sectionTitle}>Select Date</Text>
-      <View style={styles.rowWrap}>
-        {dates.map((d) => {
-          const value = d.toDateString();
-          return (
-            <TouchableOpacity
-              key={value}
-              style={[
-                styles.dateBox,
-                selectedDate === value && styles.selectedBox,
-              ]}
-              onPress={() => setSelectedDate(value)}
-            >
-              <Text
-                style={
-                  selectedDate === value
-                    ? styles.selectedText
-                    : styles.normalText
-                }
-              >
-                {d.getDate()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
       </View>
 
-      <Text style={styles.sectionTitle}>Select Time</Text>
-      <View style={styles.rowWrap}>
-        {timeSlots.map((slot) => (
-          <TouchableOpacity
-            key={slot}
-            style={[
-              styles.timeBox,
-              selectedTime === slot && styles.selectedBox,
-            ]}
-            onPress={() => setSelectedTime(slot)}
-          >
-            <Text
-              style={
-                selectedTime === slot
-                  ? styles.selectedText
-                  : styles.normalText
-              }
-            >
-              {slot}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Additional Notes</Text>
+        <Text style={styles.sectionHint}>
+          Add any instructions that can help the worker.
+        </Text>
+
+        <TextInput
+          placeholder="Example: Please call before arriving..."
+          placeholderTextColor="#888"
+          style={[styles.input, styles.notesInput]}
+          multiline
+          value={notes}
+          onChangeText={setNotes}
+        />
       </View>
 
-      <Text style={styles.sectionTitle}>Address</Text>
-      <TextInput
-        placeholder="Enter service address"
-        placeholderTextColor="#666"
-        style={styles.input}
-        value={address}
-        onChangeText={setAddress}
-      />
+      {bookingMode === "negotiation" ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Your Offer</Text>
+          <Text style={styles.sectionHint}>
+            Send your preferred price and an optional message.
+          </Text>
 
-      <Text style={styles.sectionTitle}>Notes (Optional)</Text>
-      <TextInput
-        placeholder="Any additional instructions"
-        placeholderTextColor="#666"
-        style={[styles.input, { height: 80 }]}
-        multiline
-        value={notes}
-        onChangeText={setNotes}
-      />
-
-      {bookingMode === "negotiation" && (
-        <>
-          <Text style={styles.sectionTitle}>Your Offer Price</Text>
           <TextInput
             placeholder="Enter your offer price"
-            placeholderTextColor="#666"
+            placeholderTextColor="#888"
             keyboardType="numeric"
             style={styles.input}
             value={offerPrice}
             onChangeText={setOfferPrice}
           />
 
-          <Text style={styles.sectionTitle}>Message to Worker (Optional)</Text>
           <TextInput
-            placeholder="Write your message or reasoning"
-            placeholderTextColor="#666"
-            style={[styles.input, { height: 90 }]}
+            placeholder="Optional message to worker"
+            placeholderTextColor="#888"
+            style={[styles.input, styles.notesInput]}
             multiline
             value={offerMessage}
             onChangeText={setOfferMessage}
           />
-        </>
+        </View>
+      ) : (
+        <View style={styles.infoCard}>
+          <Ionicons name="cash-outline" size={18} color="#B45309" />
+          <Text style={styles.infoText}>
+            You are booking this service at the base price. The worker can claim
+            your booking directly.
+          </Text>
+        </View>
       )}
 
       <TouchableOpacity style={styles.button} onPress={handleBooking}>
         <Text style={styles.buttonText}>
-          {bookingMode === "negotiation" ? "Create Booking & Send Offer" : "Confirm Booking"}
+          {bookingMode === "negotiation"
+            ? "Create Booking & Send Offer"
+            : "Confirm Booking"}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -203,89 +338,152 @@ export default function CreateBooking() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F8FAFC",
+  },
+
+  content: {
     padding: 20,
-    backgroundColor: "#F8F8F8",
+    paddingTop: 24,
+    paddingBottom: 40,
   },
 
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 25,
-    color: "#111111",
+  heroCard: {
+    backgroundColor: "#111111",
+    borderRadius: 24,
+    padding: 22,
+    marginBottom: 18,
   },
 
-  modeCard: {
-    backgroundColor: "#FFFFFF",
+  heroIcon: {
+    width: 46,
+    height: 46,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 6,
-  },
-
-  modeTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#111111",
-    marginBottom: 6,
-  },
-
-  modeText: {
-    color: "#666666",
-    lineHeight: 20,
-  },
-
-  sectionTitle: {
-    fontWeight: "600",
-    marginBottom: 10,
-    marginTop: 15,
-    color: "#111111",
-  },
-
-  rowWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-
-  dateBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#FFC300",
     justifyContent: "center",
     alignItems: "center",
   },
 
-  timeBox: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
-  },
-
-  selectedBox: {
-    backgroundColor: "#FFC300",
-  },
-
-  selectedText: {
-    color: "#111111",
+  title: {
+    marginTop: 18,
+    fontSize: 24,
     fontWeight: "bold",
+    color: "#FFFFFF",
   },
 
-  normalText: {
-    color: "#333",
+  subtitle: {
+    marginTop: 6,
+    color: "#D1D5DB",
+    fontSize: 14,
+    lineHeight: 21,
+  },
+
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+  },
+
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  sectionHint: {
+    marginTop: 6,
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#6B7280",
+    marginBottom: 14,
   },
 
   input: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 15,
     color: "#111111",
   },
 
+  notesInput: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+
+  scheduleRow: {
+    gap: 12,
+  },
+
+  scheduleBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  scheduleTextWrap: {
+    flex: 1,
+  },
+
+  scheduleLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginBottom: 2,
+  },
+
+  scheduleValue: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111111",
+  },
+
+  previewCard: {
+    marginTop: 10,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+
+  previewText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#166534",
+    lineHeight: 18,
+  },
+
+  previewStrong: {
+    fontWeight: "bold",
+  },
+
+  infoCard: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    marginBottom: 18,
+  },
+
+  infoText: {
+    flex: 1,
+    color: "#92400E",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
   button: {
-    marginTop: 30,
-    height: 50,
-    borderRadius: 15,
+    marginTop: 6,
+    height: 56,
+    borderRadius: 18,
     backgroundColor: "#FFC300",
     justifyContent: "center",
     alignItems: "center",
@@ -295,5 +493,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#111111",
     fontWeight: "bold",
+    fontSize: 16,
   },
 });

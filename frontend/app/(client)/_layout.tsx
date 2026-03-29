@@ -44,6 +44,11 @@ export default function ClientLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen name="booking/[id]" options={{ href: null }} />
+      <Tabs.Screen name="review/[bookingId]" options={{ href: null }} />
+      <Tabs.Screen name="payment-success" options={{ href: null }} />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
     </Tabs>
   );
 }

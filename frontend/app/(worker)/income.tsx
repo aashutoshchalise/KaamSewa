@@ -4,17 +4,94 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  TextInput,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBookings } from "../../src/api/bookings";
+import {
+  getWorkerWalletSummary,
+  getMyWithdrawals,
+  createWithdrawal,
+  type WithdrawalRequest,
+  type WorkerWalletSummary,
+} from "../../src/api/payments";
 import type { Booking } from "../../src/types";
 
+const COMMISSION_RATE = 0.2;
+
+function getJobAmount(job: Booking) {
+  return Number(job.final_price || job.service_price || 0);
+}
+
 export default function WorkerIncome() {
-  const { data, isLoading } = useQuery<Booking[]>({
+  const queryClient = useQueryClient();
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+
+  const { data: bookings, isLoading: bookingsLoading } = useQuery<Booking[]>({
     queryKey: ["worker-income-jobs"],
     queryFn: getMyBookings,
   });
+
+  const { data: wallet, isLoading: walletLoading } = useQuery<WorkerWalletSummary>({
+    queryKey: ["worker-wallet-summary"],
+    queryFn: getWorkerWalletSummary,
+  });
+
+  const { data: withdrawals, isLoading: withdrawalsLoading } = useQuery<WithdrawalRequest[]>({
+    queryKey: ["worker-withdrawals"],
+    queryFn: getMyWithdrawals,
+  });
+
+  const withdrawMutation = useMutation({
+    mutationFn: createWithdrawal,
+    onSuccess: (res) => {
+      Alert.alert("Success", res.detail);
+      setWithdrawAmount("");
+      queryClient.invalidateQueries({ queryKey: ["worker-wallet-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["worker-withdrawals"] });
+    },
+    onError: (err: any) => {
+      Alert.alert(
+        "Withdrawal Error",
+        JSON.stringify(err?.response?.data || err?.message)
+      );
+    },
+  });
+
+  const completedJobs = useMemo(
+    () => bookings?.filter((job) => job.status === "COMPLETED") ?? [],
+    [bookings]
+  );
+
+  const totalJobValue = completedJobs.reduce(
+    (sum, job) => sum + getJobAmount(job),
+    0
+  );
+
+  const estimatedCommission = Math.round(totalJobValue * COMMISSION_RATE);
+  const estimatedWorkerEarnings = Math.round(totalJobValue - estimatedCommission);
+
+  const averagePerJob =
+    completedJobs.length > 0
+      ? Math.round(estimatedWorkerEarnings / completedJobs.length)
+      : 0;
+
+  const isLoading = bookingsLoading || walletLoading || withdrawalsLoading;
+
+  function handleWithdraw() {
+    const amount = Number(withdrawAmount);
+
+    if (!amount || amount <= 0) {
+      Alert.alert("Enter a valid withdrawal amount");
+      return;
+    }
+
+    withdrawMutation.mutate(amount);
+  }
 
   if (isLoading) {
     return (
@@ -24,55 +101,134 @@ export default function WorkerIncome() {
     );
   }
 
-  const completedJobs = data?.filter((job) => job.status === "COMPLETED") ?? [];
-
-  const total = completedJobs.reduce(
-    (sum, job) => sum + Number(job.final_price || job.service_price || 0),
-    0
-  );
-
   return (
-    <View style={styles.container}>
-      <View style={styles.heroCard}>
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="wallet-outline" size={24} color="#111111" />
-          </View>
-        </View>
+    <FlatList
+      data={completedJobs}
+      keyExtractor={(item) => item.id.toString()}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.contentContainer}
+      style={styles.container}
+      ListHeaderComponent={
+        <>
+          <View style={styles.heroCard}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroIcon}>
+                <Ionicons name="wallet-outline" size={24} color="#111111" />
+              </View>
+            </View>
 
-        <Text style={styles.heroTitle}>Income Overview</Text>
-        <Text style={styles.heroSubtitle}>
-          Track your completed jobs and estimated earnings
-        </Text>
-
-        <View style={styles.summaryPanel}>
-          <Text style={styles.summaryLabel}>Estimated Total Income</Text>
-          <Text style={styles.summaryAmount}>Rs. {total}</Text>
-        </View>
-
-        <View style={styles.heroStatsRow}>
-          <View style={styles.heroStatBox}>
-            <Text style={styles.heroStatNumber}>{completedJobs.length}</Text>
-            <Text style={styles.heroStatLabel}>Completed Jobs</Text>
-          </View>
-
-          <View style={styles.heroStatBox}>
-            <Text style={styles.heroStatNumber}>
-              {completedJobs.length > 0
-                ? `Rs. ${Math.round(total / completedJobs.length)}`
-                : "Rs. 0"}
+            <Text style={styles.heroTitle}>Income & Wallet</Text>
+            <Text style={styles.heroSubtitle}>
+              Track your earnings, balance, and withdrawals
             </Text>
-            <Text style={styles.heroStatLabel}>Avg. Per Job</Text>
+
+            <View style={styles.summaryPanel}>
+              <Text style={styles.summaryLabel}>Available Balance</Text>
+              <Text style={styles.summaryAmount}>
+                Rs. {wallet?.available_balance ?? "0.00"}
+              </Text>
+            </View>
+
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStatBox}>
+                <Text style={styles.heroStatNumber}>
+                  Rs. {wallet?.total_earned ?? "0.00"}
+                </Text>
+                <Text style={styles.heroStatLabel}>Total Earned</Text>
+              </View>
+
+              <View style={styles.heroStatBox}>
+                <Text style={styles.heroStatNumber}>
+                  {wallet?.pending_withdrawals_count ?? 0}
+                </Text>
+                <Text style={styles.heroStatLabel}>Pending Requests</Text>
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Completed Jobs</Text>
-        <Text style={styles.sectionCount}>{completedJobs.length} jobs</Text>
-      </View>
+          <View style={styles.breakdownRow}>
+            <View style={styles.breakdownCard}>
+              <Text style={styles.breakdownLabel}>Completed Jobs</Text>
+              <Text style={styles.breakdownValue}>{completedJobs.length}</Text>
+            </View>
 
-      {completedJobs.length === 0 ? (
+            <View style={styles.breakdownCard}>
+              <Text style={styles.breakdownLabel}>Avg. Per Job</Text>
+              <Text style={styles.breakdownValue}>Rs. {averagePerJob}</Text>
+            </View>
+          </View>
+
+          <View style={styles.withdrawCard}>
+            <Text style={styles.withdrawTitle}>Request Withdrawal</Text>
+            <Text style={styles.withdrawSubtitle}>
+              Withdraw from your available balance
+            </Text>
+
+            <TextInput
+              value={withdrawAmount}
+              onChangeText={setWithdrawAmount}
+              placeholder="Enter amount"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              style={styles.input}
+            />
+
+            <TouchableOpacity
+              style={styles.withdrawButton}
+              onPress={handleWithdraw}
+              disabled={withdrawMutation.isPending}
+            >
+              <Ionicons name="arrow-up-outline" size={18} color="#111111" />
+              <Text style={styles.withdrawButtonText}>
+                {withdrawMutation.isPending ? "Requesting..." : "Request Withdrawal"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.noticeCard}>
+            <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+            <Text style={styles.noticeText}>
+              Your Khalti or cash-confirmed payments increase your available balance.
+              Admin-approved payouts can be handled later from withdrawal requests.
+            </Text>
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Recent Withdrawals</Text>
+            <Text style={styles.sectionCount}>
+              {withdrawals?.length ?? 0} request(s)
+            </Text>
+          </View>
+
+          {!withdrawals?.length ? (
+            <View style={styles.emptySmallCard}>
+              <Text style={styles.emptySmallText}>No withdrawal requests yet.</Text>
+            </View>
+          ) : (
+            <View style={styles.withdrawalsBlock}>
+              {withdrawals.slice(0, 3).map((item) => (
+                <View key={item.id} style={styles.withdrawRow}>
+                  <View>
+                    <Text style={styles.withdrawRowAmount}>Rs. {item.amount}</Text>
+                    <Text style={styles.withdrawRowDate}>
+                      {new Date(item.created_at).toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.withdrawStatusBadge}>
+                    <Text style={styles.withdrawStatusText}>{item.status}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Completed Jobs</Text>
+            <Text style={styles.sectionCount}>{completedJobs.length} jobs</Text>
+          </View>
+        </>
+      }
+      ListEmptyComponent={
         <View style={styles.emptyCard}>
           <Ionicons name="cash-outline" size={42} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No completed jobs yet</Text>
@@ -80,57 +236,65 @@ export default function WorkerIncome() {
             Your completed jobs and earnings will appear here.
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={completedJobs}
-          keyExtractor={(item) => item.id.toString()}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24 }}
-          renderItem={({ item }) => {
-            const displayedAmount = item.final_price || item.service_price;
+      }
+      renderItem={({ item }) => {
+        const jobAmount = getJobAmount(item);
+        const commission = Math.round(jobAmount * COMMISSION_RATE);
+        const workerGets = Math.round(jobAmount - commission);
 
-            return (
-              <View style={styles.jobCard}>
-                <View style={styles.jobTop}>
-                  <View style={styles.jobIconWrap}>
-                    <Ionicons
-                      name="briefcase-outline"
-                      size={18}
-                      color="#111111"
-                    />
-                  </View>
-
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.jobTitle}>{item.service_name}</Text>
-                    <Text style={styles.jobSub}>Job #{item.id}</Text>
-                  </View>
-
-                  <Text style={styles.jobAmount}>Rs. {displayedAmount}</Text>
-                </View>
-
-                <View style={styles.jobInfoBlock}>
-                  <View style={styles.infoRow}>
-                    <Ionicons name="location-outline" size={16} color="#6B7280" />
-                    <Text style={styles.infoText} numberOfLines={2}>
-                      {item.address}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <Ionicons name="time-outline" size={16} color="#6B7280" />
-                    <Text style={styles.infoText}>
-                      {item.scheduled_at
-                        ? new Date(item.scheduled_at).toLocaleString()
-                        : "Not scheduled"}
-                    </Text>
-                  </View>
-                </View>
+        return (
+          <View style={styles.jobCard}>
+            <View style={styles.jobTop}>
+              <View style={styles.jobIconWrap}>
+                <Ionicons name="briefcase-outline" size={18} color="#111111" />
               </View>
-            );
-          }}
-        />
-      )}
-    </View>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.jobTitle}>{item.service_name}</Text>
+                <Text style={styles.jobSub}>Job #{item.id}</Text>
+              </View>
+
+              <Text style={styles.jobAmount}>Rs. {workerGets}</Text>
+            </View>
+
+            <View style={styles.payoutBox}>
+              <View style={styles.payoutRow}>
+                <Text style={styles.payoutLabel}>Job Total</Text>
+                <Text style={styles.payoutValue}>Rs. {jobAmount}</Text>
+              </View>
+
+              <View style={styles.payoutRow}>
+                <Text style={styles.payoutLabel}>Admin Commission (20%)</Text>
+                <Text style={styles.payoutValue}>Rs. {commission}</Text>
+              </View>
+
+              <View style={styles.payoutRow}>
+                <Text style={styles.payoutLabel}>You Get</Text>
+                <Text style={styles.payoutStrong}>Rs. {workerGets}</Text>
+              </View>
+            </View>
+
+            <View style={styles.jobInfoBlock}>
+              <View style={styles.infoRow}>
+                <Ionicons name="location-outline" size={16} color="#6B7280" />
+                <Text style={styles.infoText} numberOfLines={2}>
+                  {item.address}
+                </Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Ionicons name="time-outline" size={16} color="#6B7280" />
+                <Text style={styles.infoText}>
+                  {item.scheduled_at
+                    ? new Date(item.scheduled_at).toLocaleString()
+                    : "Not scheduled"}
+                </Text>
+              </View>
+            </View>
+          </View>
+        );
+      }}
+    />
   );
 }
 
@@ -140,6 +304,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FAFC",
     paddingHorizontal: 20,
     paddingTop: 50,
+  },
+
+  contentContainer: {
+    paddingBottom: 24,
   },
 
   center: {
@@ -153,7 +321,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
     borderRadius: 24,
     padding: 22,
-    marginBottom: 20,
+    marginBottom: 16,
   },
 
   heroTopRow: {
@@ -228,6 +396,94 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
   },
 
+  breakdownRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  breakdownCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 18,
+    padding: 16,
+  },
+
+  breakdownLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
+  breakdownValue: {
+    marginTop: 8,
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  withdrawCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 14,
+  },
+
+  withdrawTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  withdrawSubtitle: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
+  input: {
+    marginTop: 14,
+    backgroundColor: "#F3F4F6",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111111",
+  },
+
+  withdrawButton: {
+    marginTop: 14,
+    backgroundColor: "#F4B400",
+    height: 54,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  withdrawButtonText: {
+    color: "#111111",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  noticeCard: {
+    backgroundColor: "#FFFBEB",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    marginBottom: 18,
+  },
+
+  noticeText: {
+    flex: 1,
+    color: "#92400E",
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -268,6 +524,57 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  emptySmallCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 18,
+  },
+
+  emptySmallText: {
+    color: "#6B7280",
+    fontSize: 14,
+  },
+
+  withdrawalsBlock: {
+    marginBottom: 18,
+    gap: 10,
+  },
+
+  withdrawRow: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  withdrawRowAmount: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#111111",
+  },
+
+  withdrawRowDate: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#6B7280",
+  },
+
+  withdrawStatusBadge: {
+    backgroundColor: "#F3F4F6",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  withdrawStatusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#111111",
+  },
+
   jobCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -306,6 +613,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
     color: "#111111",
+  },
+
+  payoutBox: {
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 14,
+  },
+
+  payoutRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+
+  payoutLabel: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+
+  payoutValue: {
+    fontSize: 13,
+    color: "#111111",
+    fontWeight: "600",
+  },
+
+  payoutStrong: {
+    fontSize: 14,
+    color: "#111111",
+    fontWeight: "bold",
   },
 
   jobInfoBlock: {

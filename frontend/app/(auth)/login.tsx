@@ -1,74 +1,112 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
+import { useState } from "react";
 import { useRouter } from "expo-router";
-import { useAuth } from "../../src/store/AuthContext";
 
+import { login } from "../../src/api/auth";
+import { setTokens } from "@/src/api/api";
 export default function LoginScreen() {
   const router = useRouter();
-  const { login } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  async function handleLogin() {
+  const handleLogin = async () => {
     try {
-      await login(username, password);
-      router.replace("/");
-    } catch (err: any) {
-      console.log("LOGIN ERROR:", err?.response?.data || err.message);
+      const res = await login({
+        username,
+        password,
+      });
 
+      await setTokens(res.access, res.refresh);
+
+      Alert.alert("Login success ✅");
+
+      router.replace("/(client)/bookings");
+    } catch (err: any) {
       Alert.alert(
         "Login failed",
-        JSON.stringify(err?.response?.data || err.message)
+        err?.response?.data?.detail || "Invalid credentials"
       );
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Welcome Back 👋</Text>
+      <Text style={styles.subtitle}>Login to continue</Text>
 
       <TextInput
         placeholder="Username"
+        style={styles.input}
         value={username}
         onChangeText={setUsername}
-        style={styles.input}
       />
 
       <TextInput
         placeholder="Password"
         secureTextEntry
+        style={styles.input}
         value={password}
         onChangeText={setPassword}
-        style={styles.input}
       />
 
-      <Button title="Login" onPress={handleLogin} />
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+        <Text style={styles.buttonText}>Login</Text>
+      </TouchableOpacity>
 
-      <View style={{ marginTop: 16 }}>
-        <Button
-          title="Don't have an account? Register"
-          onPress={() => router.push("/register")}
-        />
-      </View>
+      {/* REGISTER BUTTON */}
+      <TouchableOpacity onPress={() => router.push("/register")}>
+        <Text style={styles.registerText}>
+          Don’t have an account? Register
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: "center" },
-
-  title: {
-    fontSize: 24,
-    marginBottom: 24,
-    textAlign: "center",
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: "#F8FAFC",
   },
-
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  subtitle: {
+    color: "#6B7280",
+    marginBottom: 24,
+  },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 6,
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: "#111",
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 10,
+  },
+  buttonText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "bold",
+  },
+  registerText: {
+    textAlign: "center",
+    marginTop: 16,
+    color: "#2563EB",
   },
 });

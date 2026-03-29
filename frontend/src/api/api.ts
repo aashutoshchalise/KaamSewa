@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const baseURL = "http://192.168.1.67:8001";
+const baseURL = "http://192.168.1.67:8001"; // ⚠️ change if needed
 
 export const api = axios.create({
   baseURL,
@@ -14,9 +14,11 @@ export const api = axios.create({
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";
 
+// 🔹 TOKEN GETTERS
 export const getAccessToken = () => AsyncStorage.getItem(ACCESS_KEY);
 export const getRefreshToken = () => AsyncStorage.getItem(REFRESH_KEY);
 
+// 🔹 SET TOKENS
 export const setTokens = async (access: string, refresh: string) => {
   await AsyncStorage.multiSet([
     [ACCESS_KEY, access],
@@ -24,9 +26,11 @@ export const setTokens = async (access: string, refresh: string) => {
   ]);
 };
 
+//  CLEAR TOKENS
 export const clearTokens = () =>
   AsyncStorage.multiRemove([ACCESS_KEY, REFRESH_KEY]);
 
+//  REQUEST INTERCEPTOR
 api.interceptors.request.use(async (config) => {
   const token = await getAccessToken();
 
@@ -43,10 +47,11 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+//  RESPONSE INTERCEPTOR
 api.interceptors.response.use(
   (res) => {
     console.log(
-      "✅ API RESPONSE:",
+      " API RESPONSE:",
       res.status,
       res.config.method?.toUpperCase(),
       (res.config.baseURL || "") + (res.config.url || "")
@@ -57,7 +62,9 @@ api.interceptors.response.use(
     const status = err?.response?.status;
     const data = err?.response?.data;
     const url = (err?.config?.baseURL || "") + (err?.config?.url || "");
-    console.log("❌ API ERROR:", status, url, data || err.message);
+
+    console.log(" API ERROR:", status, url, data || err.message);
+
     return Promise.reject(err);
   }
 );

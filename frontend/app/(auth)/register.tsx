@@ -1,77 +1,43 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, Alert } from "react-native";
-import { useRouter } from "expo-router";
-import { register } from "../../src/api/auth";
-import { useAuth } from "../../src/store/AuthContext";
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+} from "react-native";
+import { useState } from "react";
 
 export default function RegisterScreen() {
-  const router = useRouter();
-  const { login } = useAuth();
-
   const [username, setUsername] = useState("");
-  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"CLIENT" | "WORKER">("CLIENT");
-
-  async function handleRegister() {
-    if (!username.trim() || !password.trim()) {
-      Alert.alert("Please fill all required fields");
-      return;
-    }
-
-    try {
-      await register({
-        username,
-        password,
-        phone: phone.trim(),
-        role,
-      });
-
-      await login(username, password);
-      router.replace("/");
-    } catch (err: any) {
-      console.log(err);
-      Alert.alert(
-        "Registration failed",
-        JSON.stringify(err?.response?.data || err?.message || "Something went wrong")
-      );
-    }
-  }
+  const [phone, setPhone] = useState("");
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+      <Text style={styles.title}>Create Account 🚀</Text>
 
       <TextInput
         placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
         style={styles.input}
+        onChangeText={setUsername}
       />
 
       <TextInput
-        placeholder="Phone Number"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
+        placeholder="Phone"
         style={styles.input}
+        onChangeText={setPhone}
       />
 
       <TextInput
         placeholder="Password"
         secureTextEntry
-        value={password}
-        onChangeText={setPassword}
         style={styles.input}
+        onChangeText={setPassword}
       />
 
-      <View style={{ marginBottom: 20 }}>
-        <Button title="Register as Client" onPress={() => setRole("CLIENT")} />
-        <View style={{ height: 10 }} />
-        <Button title="Register as Worker" onPress={() => setRole("WORKER")} />
-      </View>
-
-      <Button title="Register" onPress={handleRegister} />
+      <TouchableOpacity style={styles.button}>
+        <Text style={styles.buttonText}>Register</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -79,24 +45,28 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
     justifyContent: "center",
-    backgroundColor: "#F8F8F8",
+    padding: 24,
+    backgroundColor: "#F8FAFC",
   },
   title: {
-    fontSize: 24,
-    marginBottom: 24,
-    textAlign: "center",
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#111111",
+    marginBottom: 20,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 12,
-    marginBottom: 16,
-    borderRadius: 10,
-    backgroundColor: "#FFFFFF",
-    color: "#111111",
+    backgroundColor: "#fff",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  button: {
+    backgroundColor: "#F4B400",
+    padding: 16,
+    borderRadius: 12,
+  },
+  buttonText: {
+    textAlign: "center",
+    fontWeight: "bold",
   },
 });
