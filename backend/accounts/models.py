@@ -11,6 +11,33 @@ class WorkerSkill(models.Model):
     def __str__(self):
         return self.name
 
+class SupportMessage(models.Model):
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        REPLIED = "REPLIED", "Replied"
+        CLOSED = "CLOSED", "Closed"
+
+    client = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="support_messages",
+    )
+    subject = models.CharField(max_length=150)
+    message = models.TextField()
+    admin_reply = models.TextField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.OPEN,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+def save(self, *args, **kwargs):
+    if self.admin_reply and self.status == "OPEN":
+        self.status = "REPLIED"
+    super().save(*args, **kwargs)
 
 class CustomUser(AbstractUser):
     
@@ -131,3 +158,21 @@ class WorkerReview(models.Model):
         wp = self.worker_profile
         super().delete(*args, **kwargs)
         wp.recompute_rating()
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    title = models.CharField(max_length=120)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"

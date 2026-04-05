@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect } from "expo-router";
 import { useAuth } from "../../src/store/AuthContext";
 
 export default function ClientProfileScreen() {
@@ -74,6 +73,18 @@ export default function ClientProfileScreen() {
           icon="document-text-outline"
           label="My Bookings"
           onPress={() => router.push("/(client)/bookings")}
+        />
+
+        <MenuItem
+          icon="notifications-outline"
+          label="Notifications"
+          onPress={() => router.push("/(client)/notifications")}
+        />
+
+        <MenuItem
+          icon="chatbubble-ellipses-outline"
+          label="Support & Complaints"
+          onPress={() => router.push("/(client)/support")}
         />
 
         <MenuItem

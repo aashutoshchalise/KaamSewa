@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, WorkerProfile, ClientProfile, WorkerSkill
+from .models import CustomUser, WorkerProfile, ClientProfile, WorkerSkill, SupportMessage
 
 
 @admin.register(CustomUser)
@@ -28,3 +28,22 @@ class WorkerProfileAdmin(admin.ModelAdmin):
 class ClientProfileAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "city", "district")
     search_fields = ("user__username",)
+
+
+@admin.register(SupportMessage)
+class SupportMessageAdmin(admin.ModelAdmin):
+    list_display = ("id", "client", "subject", "status", "created_at", "updated_at")
+    list_filter = ("status", "created_at")
+    search_fields = ("client__username", "subject", "message", "admin_reply")
+
+    fields = (
+        "client",
+        "subject",
+        "message",
+        "admin_reply",
+        "status",
+        "created_at",
+        "updated_at",
+    )
+
+    readonly_fields = ("client", "subject", "message", "created_at", "updated_at")

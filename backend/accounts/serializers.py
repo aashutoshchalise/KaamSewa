@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
-from .models import WorkerProfile, ClientProfile, WorkerSkill
+from .models import WorkerProfile, ClientProfile, WorkerSkill, SupportMessage, Notification
 
 User = get_user_model()
 
@@ -150,3 +150,26 @@ def create(self, validated_data):
     user.set_password(password)
     user.save()
     return user
+
+class SupportMessageSerializer(serializers.ModelSerializer):
+    client_username = serializers.CharField(source="client.username", read_only=True)
+
+    class Meta:
+        model = SupportMessage
+        fields = [
+            "id",
+            "client",
+            "client_username",
+            "subject",
+            "message",
+            "admin_reply",
+            "status",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["client", "admin_reply", "status", "created_at", "updated_at"]
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ["id", "title", "message", "is_read", "created_at"]

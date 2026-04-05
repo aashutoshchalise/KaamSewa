@@ -20,8 +20,8 @@ import requests
 KHALTI_SECRET_KEY = "4551fee3f61e4fd293bb998d56933343"
 KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/"
 KHALTI_LOOKUP_URL = "https://dev.khalti.com/api/v2/epayment/lookup/"
-KHALTI_RETURN_URL = "exp://100.64.209.138:8081/--/(client)/payment-success"
-KHALTI_WEBSITE_URL = "http://192.168.1.67:8081"
+KHALTI_RETURN_URL = "exp://192.168.1.75:8081/--/(client)/payment-success"
+KHALTI_WEBSITE_URL = "http://192.168.1.75:8081"
 
 
 class PaymentDetailByBookingView(APIView):

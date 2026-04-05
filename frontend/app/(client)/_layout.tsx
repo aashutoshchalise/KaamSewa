@@ -84,6 +84,8 @@ export default function ClientLayout() {
       <Tabs.Screen name="review/[bookingId]" options={{ href: null }} />
       <Tabs.Screen name="payment-success" options={{ href: null }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
+      <Tabs.Screen name="support" options={{ href: null }} />
     </Tabs>
   );
 }

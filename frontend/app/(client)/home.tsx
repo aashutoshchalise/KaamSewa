@@ -49,9 +49,12 @@ export default function ClientHome() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={22} color="#111111" />
-          </TouchableOpacity>
+          <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => router.push("/(client)/notifications")}
+            >
+              <Ionicons name="notifications-outline" size={22} color="#111111" />
+            </TouchableOpacity>
         </View>
 
         <Text style={styles.greeting}>Hi, {user?.username}</Text>

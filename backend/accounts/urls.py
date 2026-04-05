@@ -8,6 +8,10 @@ from .views import (
     WorkerProfileMeView,
     RegisterView,
     ProfileUpdateView,
+    CreateSupportMessageView,
+    MySupportMessagesView,
+    MyNotificationsView,
+    MarkNotificationReadView,
 )
 
 urlpatterns = [
@@ -21,4 +25,10 @@ urlpatterns = [
     path("admin/workers/<int:user_id>/approve/", AdminApproveWorkerView.as_view()),
 
     path("worker/profile/", WorkerProfileMeView.as_view()),
+
+    path("support/create/", CreateSupportMessageView.as_view()),
+    path("support/my/", MySupportMessagesView.as_view()),
+
+    path("notifications/my/", MyNotificationsView.as_view()),
+    path("notifications/<int:notification_id>/read/", MarkNotificationReadView.as_view()),
 ]

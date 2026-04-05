@@ -4,31 +4,15 @@ from .views import (
     MyBookingsView,
     AvailableBookingsForWorkerView,
     ClaimBookingView,
-    CreateNegotiationView,
-    AcceptNegotiationView,
-    UpdateBookingStatusView,
-    BookingEventsView,
     StartJobView,
     CompleteJobView,
 )
 
 urlpatterns = [
-    path("create/", CreateBookingView.as_view(), name="booking-create"),
-    path("my/", MyBookingsView.as_view(), name="booking-my"),
-    path("available/", AvailableBookingsForWorkerView.as_view(), name="booking-available"),
-
-    path("<int:pk>/claim/", ClaimBookingView.as_view(), name="booking-claim"),
-
-    path("<int:pk>/negotiate/", CreateNegotiationView.as_view(), name="booking-negotiate"),
-    path(
-        "negotiation/<int:negotiation_id>/accept/",
-        AcceptNegotiationView.as_view(),
-        name="negotiation-accept",
-    ),
-
-    path("<int:pk>/start/", StartJobView.as_view(), name="booking-start"),
-    path("<int:pk>/complete/", CompleteJobView.as_view(), name="booking-complete"),
-
-    path("<int:pk>/status/", UpdateBookingStatusView.as_view(), name="booking-status"),
-    path("<int:pk>/events/", BookingEventsView.as_view(), name="booking-events"),
+    path("create/", CreateBookingView.as_view()),
+    path("my/", MyBookingsView.as_view()),
+    path("available/", AvailableBookingsForWorkerView.as_view()),
+    path("<int:pk>/claim/", ClaimBookingView.as_view()),
+    path("<int:pk>/start/", StartJobView.as_view()),
+    path("<int:pk>/complete/", CompleteJobView.as_view()),
 ]

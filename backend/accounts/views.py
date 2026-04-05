@@ -6,6 +6,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import ProfileUpdateSerializer
 from rest_framework.permissions import IsAuthenticated
+from .models import SupportMessage
+from .serializers import SupportMessageSerializer
+from .models import Notification
+from .serializers import NotificationSerializer
 
 
 from .permissions import IsAdmin, IsWorker
@@ -103,3 +107,49 @@ class ProfileUpdateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(MeSerializer(request.user).data)
+
+class CreateSupportMessageView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = SupportMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        support_message = SupportMessage.objects.create(
+            client=request.user,
+            subject=serializer.validated_data["subject"],
+            message=serializer.validated_data["message"],
+        )
+        return Response(SupportMessageSerializer(support_message).data, status=201)
+
+
+class MySupportMessagesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = SupportMessage.objects.filter(client=request.user).order_by("-created_at")
+        return Response(SupportMessageSerializer(qs, many=True).data)
+
+
+class MyNotificationsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        qs = Notification.objects.filter(user=request.user)
+        return Response(NotificationSerializer(qs, many=True).data)
+
+
+class MarkNotificationReadView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, notification_id):
+        notification = Notification.objects.filter(
+            id=notification_id,
+            user=request.user
+        ).first()
+
+        if not notification:
+            return Response({"detail": "Notification not found."}, status=404)
+
+        notification.is_read = True
+        notification.save(update_fields=["is_read"])
+        return Response({"detail": "Notification marked as read."})
