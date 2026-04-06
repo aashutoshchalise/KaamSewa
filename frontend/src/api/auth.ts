@@ -22,6 +22,7 @@ export type LoginResponse = {
 export type RegisterPayload = {
   username: string;
   password: string;
+  confirm_password: string;
   phone: string;
   role: "CLIENT" | "WORKER";
   khalti_number?: string;

@@ -15,6 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { register } from "../../src/api/auth";
 
+function isValidPassword(value: string) {
+  return /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/.test(value);
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
 
@@ -30,6 +34,14 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!username.trim() || !phone.trim() || !password || !confirmPassword) {
       Alert.alert("Missing fields", "Please fill all required fields.");
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      Alert.alert(
+        "Weak password",
+        "Password must be at least 8 characters long and include 1 uppercase letter, 1 number, and 1 special character."
+      );
       return;
     }
 
@@ -53,10 +65,10 @@ export default function RegisterScreen() {
         username: username.trim(),
         phone: phone.trim(),
         password,
+        confirm_password: confirmPassword,
         role,
         khalti_number: role === "WORKER" ? khaltiNumber.trim() : undefined,
-        bank_account_number:
-          role === "WORKER" ? bankAccountNumber.trim() : undefined,
+        bank_account_number: role === "WORKER" ? bankAccountNumber.trim() : undefined,
       });
 
       Alert.alert("Account created", "Your account was created successfully.", [
@@ -186,6 +198,10 @@ export default function RegisterScreen() {
             secureTextEntry
           />
 
+          <Text style={styles.passwordHint}>
+            Must be 8+ characters with 1 uppercase letter, 1 number, and 1 special character.
+          </Text>
+
           <Text style={styles.label}>Confirm Password</Text>
           <TextInput
             placeholder="Re-enter password"
@@ -301,6 +317,13 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     fontSize: 15,
     color: "#111111",
+  },
+
+  passwordHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: "#6B7280",
+    lineHeight: 18,
   },
 
   button: {
