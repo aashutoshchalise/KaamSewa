@@ -1,18 +1,15 @@
 import { api } from "./axios";
 
 export type CreateReviewPayload = {
-  booking: number;
+  bookingId: number;
   rating: number;
-  comment: string;
+  comment?: string;
 };
 
 export async function createReview(payload: CreateReviewPayload) {
-  const { booking, rating, comment } = payload;
-
-  const { data } = await api.post(`/api/reviews/${booking}/`, {
-    rating,
-    comment,
+  const res = await api.post(`/api/reviews/${payload.bookingId}/`, {
+    rating: payload.rating,
+    comment: payload.comment ?? "",
   });
-
-  return data;
+  return res.data;
 }

@@ -6,6 +6,7 @@ from .views import (
     ClaimBookingView,
     StartJobView,
     CompleteJobView,
+    CancelBookingView,
 )
 
 urlpatterns = [
@@ -15,4 +16,5 @@ urlpatterns = [
     path("<int:pk>/claim/", ClaimBookingView.as_view()),
     path("<int:pk>/start/", StartJobView.as_view()),
     path("<int:pk>/complete/", CompleteJobView.as_view()),
+    path("<int:pk>/cancel/", CancelBookingView.as_view(), name="booking-cancel"),
 ]

@@ -27,9 +27,7 @@ export type BookingEvent = {
   created_at: string;
 };
 
-/**
- * CLIENT — create booking
- */
+
 export async function createBooking(payload: {
   service: number;
   address: string;
@@ -40,33 +38,25 @@ export async function createBooking(payload: {
   return data;
 }
 
-/**
- * CLIENT or WORKER — get own bookings
- */
+
 export async function getMyBookings(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>("/api/bookings/my/");
   return data;
 }
 
-/**
- * WORKER — see available jobs
- */
+
 export async function getAvailableJobs(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>("/api/bookings/available/");
   return data;
 }
 
-/**
- * WORKER — claim booking
- */
+
 export async function claimJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/claim/`);
   return data;
 }
 
-/**
- * CLIENT or WORKER — create negotiation on a booking
- */
+
 export async function createNegotiation(
   bookingId: number,
   payload: CreateNegotiationPayload
@@ -78,9 +68,7 @@ export async function createNegotiation(
   return data;
 }
 
-/**
- * CLIENT or WORKER — accept negotiation
- */
+
 export async function acceptNegotiation(
   negotiationId: number
 ): Promise<Booking> {
@@ -90,26 +78,19 @@ export async function acceptNegotiation(
   return data;
 }
 
-/**
- * WORKER — start job
- */
+
 export async function startJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/start/`);
   return data;
 }
 
-/**
- * WORKER — complete job
- */
+
 export async function completeJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/complete/`);
   return data;
 }
 
-/**
- * CLIENT — cancel booking
- * ADMIN — any transition
- */
+
 export async function updateBookingStatus(
   id: number,
   status: Booking["status"]
@@ -120,10 +101,14 @@ export async function updateBookingStatus(
   return data;
 }
 
-/**
- * CLIENT / WORKER / ADMIN — booking timeline
- */
+
 export async function getBookingEvents(id: number): Promise<BookingEvent[]> {
   const { data } = await api.get<BookingEvent[]>(`/api/bookings/${id}/events/`);
   return data;
+}
+
+
+export async function cancelBooking(bookingId: number) {
+  const res = await api.post(`/api/bookings/${bookingId}/cancel/`);
+  return res.data;
 }

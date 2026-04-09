@@ -1,7 +1,13 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
-const baseURL = "http://192.168.1.67:8001";
+const PORT = 8001;
+
+const baseURL =
+  Platform.OS === "android"
+    ? `http://10.0.2.2:${PORT}`
+    : `http://127.0.0.1:${PORT}`;
 
 export const api = axios.create({
   baseURL,
@@ -46,7 +52,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => {
     console.log(
-      "✅ API RESPONSE:",
+      "API RESPONSE:",
       res.status,
       res.config.method?.toUpperCase(),
       (res.config.baseURL || "") + (res.config.url || "")
@@ -57,7 +63,9 @@ api.interceptors.response.use(
     const status = err?.response?.status;
     const data = err?.response?.data;
     const url = (err?.config?.baseURL || "") + (err?.config?.url || "");
-    console.log("❌ API ERROR:", status, url, data || err.message);
+
+    console.log("API ERROR:", status, url, data || err.message);
+
     return Promise.reject(err);
   }
 );

@@ -1,18 +1,14 @@
+from decimal import Decimal
 from django.db import transaction
+from django.shortcuts import redirect
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from rest_framework import status
 
 from accounts.models import WorkerProfile
-from .models import Payment
-from .serializers import PaymentSerializer
-
-from .models import WithdrawalRequest
-from .serializers import WithdrawalRequestSerializer
-from accounts.models import WorkerProfile
-from decimal import Decimal
+from .models import Payment, WithdrawalRequest
+from .serializers import PaymentSerializer, WithdrawalRequestSerializer
 
 import requests
 
@@ -20,15 +16,21 @@ import requests
 KHALTI_SECRET_KEY = "4551fee3f61e4fd293bb998d56933343"
 KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/"
 KHALTI_LOOKUP_URL = "https://dev.khalti.com/api/v2/epayment/lookup/"
+
+
 KHALTI_RETURN_URL = "exp://192.168.1.75:8081/--/(client)/payment-success"
-KHALTI_WEBSITE_URL = "http://192.168.1.75:8081"
+KHALTI_WEBSITE_URL = "http://192.168.1.84:8081"
 
 
 class PaymentDetailByBookingView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, booking_id: int):
-        payment = Payment.objects.select_related("booking").filter(booking_id=booking_id).first()
+        payment = (
+            Payment.objects.select_related("booking")
+            .filter(booking_id=booking_id)
+            .first()
+        )
 
         if not payment:
             return Response({"detail": "Payment not found."}, status=404)
@@ -55,11 +57,11 @@ class InitiateKhaltiPaymentView(APIView):
             return Response({"detail": "Already processed."}, status=400)
 
         payload = {
-            "return_url": f"kaamsewa://payment-success?payment_id={payment.id}",
-            "website_url": "http://localhost:8001",
-            "amount": int(float(payment.amount) * 100),
+            "return_url": f"{KHALTI_RETURN_URL}?payment_id={payment.id}",
+            "website_url": KHALTI_WEBSITE_URL,
+            "amount": int(Decimal(payment.amount) * 100),
             "purchase_order_id": str(payment.id),
-            "purchase_order_name": f"Booking #{payment.id}",
+            "purchase_order_name": f"Booking #{payment.booking_id}",
         }
 
         headers = {
@@ -95,40 +97,6 @@ class InitiateKhaltiPaymentView(APIView):
             status=200,
         )
 
-class WorkerWalletSummaryView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        if getattr(request.user, "role", "") != "WORKER":
-            return Response({"detail": "Only workers can access wallet."}, status=403)
-
-        worker_profile = WorkerProfile.objects.filter(user=request.user).first()
-        if not worker_profile:
-            return Response({"detail": "Worker profile not found."}, status=404)
-
-        pending_withdrawals = (
-            WithdrawalRequest.objects.filter(
-                worker=request.user,
-                status=WithdrawalRequest.Status.PENDING,
-            )
-            .order_by("-created_at")
-        )
-
-        total_pending_withdrawals = sum(
-            [item.amount for item in pending_withdrawals], Decimal("0.00")
-        )
-
-        return Response(
-            {
-                "total_earned": worker_profile.total_earned,
-                "available_balance": worker_profile.available_balance,
-                "pending_withdrawals_total": total_pending_withdrawals,
-                "pending_withdrawals_count": pending_withdrawals.count(),
-            },
-            status=status.HTTP_200_OK,
-        )
-
-
 
 class VerifyKhaltiPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -141,6 +109,15 @@ class VerifyKhaltiPaymentView(APIView):
 
         if payment.client_id != request.user.id:
             return Response({"detail": "Not your payment."}, status=403)
+
+        if payment.status == Payment.Status.PAID:
+            return Response(
+                {
+                    "detail": "Payment already verified",
+                    "transaction_reference": payment.transaction_reference,
+                },
+                status=200,
+            )
 
         if not payment.khalti_pidx:
             return Response({"detail": "No Khalti session."}, status=400)
@@ -175,7 +152,12 @@ class VerifyKhaltiPaymentView(APIView):
 
         with transaction.atomic():
             payment.status = Payment.Status.PAID
-            payment.transaction_reference = data.get("transaction_id") or ""
+            payment.transaction_reference = (
+                data.get("transaction_id")
+                or data.get("idx")
+                or payment.transaction_reference
+                or ""
+            )
             payment.save(update_fields=["status", "transaction_reference"])
 
             worker_profile = WorkerProfile.objects.select_for_update().get(
@@ -224,6 +206,41 @@ class ConfirmPaymentView(APIView):
         return Response({"detail": "Payment confirmed and wallet updated."}, status=200)
 
 
+class WorkerWalletSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if getattr(request.user, "role", "") != "WORKER":
+            return Response({"detail": "Only workers can access wallet."}, status=403)
+
+        worker_profile = WorkerProfile.objects.filter(user=request.user).first()
+        if not worker_profile:
+            return Response({"detail": "Worker profile not found."}, status=404)
+
+        pending_withdrawals = (
+            WithdrawalRequest.objects.filter(
+                worker=request.user,
+                status=WithdrawalRequest.Status.PENDING,
+            )
+            .order_by("-created_at")
+        )
+
+        total_pending_withdrawals = sum(
+            [item.amount for item in pending_withdrawals],
+            Decimal("0.00"),
+        )
+
+        return Response(
+            {
+                "total_earned": worker_profile.total_earned,
+                "available_balance": worker_profile.available_balance,
+                "pending_withdrawals_total": total_pending_withdrawals,
+                "pending_withdrawals_count": pending_withdrawals.count(),
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class CreateWithdrawalRequestView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -244,9 +261,10 @@ class CreateWithdrawalRequestView(APIView):
         )
 
         worker_profile.available_balance -= amount
-        worker_profile.save()
+        worker_profile.save(update_fields=["available_balance"])
 
         return Response({"detail": "Withdrawal requested"})
+
 
 class MyWithdrawalsView(APIView):
     permission_classes = [IsAuthenticated]

@@ -47,9 +47,7 @@ def get_booking_amount(booking: Booking) -> Decimal:
     return Decimal("0.00")
 
 
-# =========================
-# CREATE BOOKING
-# =========================
+
 class CreateBookingView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -76,9 +74,7 @@ class CreateBookingView(APIView):
         return Response(BookingListSerializer(booking).data)
 
 
-# =========================
-# MY BOOKINGS
-# =========================
+
 class MyBookingsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -95,9 +91,7 @@ class MyBookingsView(APIView):
         return Response(BookingListSerializer(qs, many=True).data)
 
 
-# =========================
-# AVAILABLE BOOKINGS
-# =========================
+
 class AvailableBookingsForWorkerView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -109,9 +103,6 @@ class AvailableBookingsForWorkerView(APIView):
         return Response(BookingListSerializer(qs, many=True).data)
 
 
-# =========================
-# CLAIM BOOKING
-# =========================
 class ClaimBookingView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -138,9 +129,7 @@ class ClaimBookingView(APIView):
         return Response(BookingListSerializer(booking).data)
 
 
-# =========================
-# START JOB
-# =========================
+
 class StartJobView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -162,25 +151,108 @@ class StartJobView(APIView):
         return Response(BookingListSerializer(booking).data)
 
 
-# =========================
-# COMPLETE JOB
-# =========================
 class CompleteJobView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, pk):
-        booking = Booking.objects.get(pk=pk)
+    def post(self, request, pk: int):
+        if not is_worker(request.user):
+            return Response({"detail": "Only WORKER can complete jobs."}, status=403)
 
-        if booking.worker != request.user:
-            return Response({"detail": "Not yours"}, status=403)
+        with transaction.atomic():
+            booking = Booking.objects.select_for_update().filter(pk=pk).first()
+            if not booking:
+                return Response({"detail": "Not found."}, status=404)
 
-        booking.status = "COMPLETED"
-        booking.save()
+            if booking.worker_id != request.user.id:
+                return Response({"detail": "Not your booking."}, status=403)
 
-        Notification.objects.create(
-            user=booking.client,
-            title="Completed",
-            message="Your service is completed",
-        )
+            if booking.status != Booking.Status.IN_PROGRESS:
+                return Response({"detail": "Cannot complete job."}, status=400)
 
-        return Response(BookingListSerializer(booking).data)
+            booking.status = Booking.Status.COMPLETED
+
+            if booking.final_price is None:
+                booking.final_price = get_booking_amount(booking)
+
+            booking.save(update_fields=["status", "final_price", "updated_at"])
+
+            payment = Payment.objects.filter(booking=booking).first()
+
+            if not payment:
+                total_amount = Decimal(
+                    str(booking.final_price if booking.final_price is not None else get_booking_amount(booking))
+                ).quantize(Decimal("0.01"))
+
+                commission_rate = Decimal("0.20")
+                commission_amount = (total_amount * commission_rate).quantize(Decimal("0.01"))
+                worker_earning = (total_amount - commission_amount).quantize(Decimal("0.01"))
+
+                Payment.objects.create(
+                    booking=booking,
+                    client=booking.client,
+                    worker=booking.worker,
+                    amount=total_amount,
+                    commission_amount=commission_amount,
+                    worker_earning=worker_earning,
+                    method=Payment.Method.CASH,
+                    status=Payment.Status.PENDING,
+                    khalti_pidx=None,
+                    transaction_reference="",
+                )
+
+            Notification.objects.create(
+                user=booking.client,
+                title="Service Completed",
+                message="Your service has been completed.",
+            )
+
+        return Response(BookingListSerializer(booking).data, status=200)
+
+
+class CancelBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk: int):
+        booking = Booking.objects.filter(pk=pk).first()
+        if not booking:
+            return Response({"detail": "Booking not found."}, status=404)
+
+        if role_of(request.user) != "CLIENT":
+            return Response({"detail": "Only CLIENT can cancel bookings."}, status=403)
+
+        if booking.client_id != request.user.id:
+            return Response({"detail": "Not your booking."}, status=403)
+
+        if booking.status in [
+            Booking.Status.IN_PROGRESS,
+            Booking.Status.COMPLETED,
+            Booking.Status.CANCELED,
+        ]:
+            return Response(
+                {"detail": "This booking cannot be canceled now."},
+                status=400,
+            )
+
+        booking.status = Booking.Status.CANCELED
+        booking.save(update_fields=["status", "updated_at"])
+
+        try:
+            Notification.objects.create(
+                user=booking.client,
+                title="Booking Canceled",
+                message="Your booking has been canceled successfully.",
+            )
+        except Exception:
+            pass
+
+        if booking.worker_id:
+            try:
+                Notification.objects.create(
+                    user=booking.worker,
+                    title="Booking Canceled",
+                    message="A booking assigned to you has been canceled by the client.",
+                )
+            except Exception:
+                pass
+
+        return Response({"detail": "Booking canceled successfully."}, status=200)

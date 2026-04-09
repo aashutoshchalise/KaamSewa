@@ -28,6 +28,8 @@ export type VerifyKhaltiPaymentResponse = {
   transaction_reference?: string;
 };
 
+
+
 export type WithdrawalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type WithdrawalRequest = {
@@ -73,14 +75,10 @@ export async function initiateKhaltiPayment(
 }
 
 export async function verifyKhaltiPayment(
-  paymentId: number,
-  pidx: string
+  paymentId: number
 ): Promise<VerifyKhaltiPaymentResponse> {
-  const { data } = await api.post<VerifyKhaltiPaymentResponse>(
-    `/api/payments/${paymentId}/khalti/verify/`,
-    { pidx }
-  );
-  return data;
+  const res = await api.post(`/api/payments/${paymentId}/khalti/verify/`);
+  return res.data;
 }
 
 export async function getWorkerWalletSummary(): Promise<WorkerWalletSummary> {

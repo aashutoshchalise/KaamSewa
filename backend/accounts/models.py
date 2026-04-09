@@ -33,11 +33,10 @@ class SupportMessage(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-
-def save(self, *args, **kwargs):
-    if self.admin_reply and self.status == "OPEN":
-        self.status = "REPLIED"
-    super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        if self.admin_reply and self.status == "OPEN":
+            self.status = "REPLIED"
+        super().save(*args, **kwargs)
 
 class CustomUser(AbstractUser):
     
