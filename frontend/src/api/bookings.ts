@@ -27,35 +27,35 @@ export type BookingEvent = {
   created_at: string;
 };
 
-
-export async function createBooking(payload: {
-  service: number;
+export type CreateBookingPayload = {
+  service?: number;
+  package?: number;
   address: string;
   notes?: string;
   scheduled_at?: string | null;
-}) {
+};
+
+export async function createBooking(
+  payload: CreateBookingPayload
+): Promise<Booking> {
   const { data } = await api.post<Booking>("/api/bookings/create/", payload);
   return data;
 }
-
 
 export async function getMyBookings(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>("/api/bookings/my/");
   return data;
 }
 
-
 export async function getAvailableJobs(): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>("/api/bookings/available/");
   return data;
 }
 
-
 export async function claimJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/claim/`);
   return data;
 }
-
 
 export async function createNegotiation(
   bookingId: number,
@@ -68,7 +68,6 @@ export async function createNegotiation(
   return data;
 }
 
-
 export async function acceptNegotiation(
   negotiationId: number
 ): Promise<Booking> {
@@ -78,18 +77,15 @@ export async function acceptNegotiation(
   return data;
 }
 
-
 export async function startJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/start/`);
   return data;
 }
 
-
 export async function completeJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/complete/`);
   return data;
 }
-
 
 export async function updateBookingStatus(
   id: number,
@@ -101,14 +97,12 @@ export async function updateBookingStatus(
   return data;
 }
 
-
 export async function getBookingEvents(id: number): Promise<BookingEvent[]> {
   const { data } = await api.get<BookingEvent[]>(`/api/bookings/${id}/events/`);
   return data;
 }
 
-
-export async function cancelBooking(bookingId: number) {
-  const res = await api.post(`/api/bookings/${bookingId}/cancel/`);
-  return res.data;
+export async function cancelBooking(bookingId: number): Promise<any> {
+  const { data } = await api.post(`/api/bookings/${bookingId}/cancel/`);
+  return data;
 }

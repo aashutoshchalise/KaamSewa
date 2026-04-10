@@ -15,3 +15,13 @@ export async function getServiceById(id: number) {
   const { data } = await api.get<Service>(`/api/services/${id}/`);
   return data;
 }
+
+export async function getPackageList() {
+  const { data } = await api.get("/api/services/packages/");
+  return data;
+}
+
+export async function getPackage(id: number) {
+  const { data } = await api.get(`/api/services/packages/${id}/`);
+  return data;
+}

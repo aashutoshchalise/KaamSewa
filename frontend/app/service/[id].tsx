@@ -31,8 +31,15 @@ export default function ServiceDetail() {
   return (
     <View style={styles.screen}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
-        {service.image ? (
-          <Image source={{ uri: service.image }} style={styles.image} />
+      {service.image ? (
+          <Image
+            source={{
+              uri: service.image.startsWith("http")
+                ? service.image
+                : `http://192.168.1.144:8001${service.image}`,
+            }}
+            style={styles.image}
+          />
         ) : (
           <View style={styles.image} />
         )}

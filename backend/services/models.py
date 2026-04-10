@@ -2,9 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator
 
 
-# =========================
-# CATEGORY
-# =========================
+
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=120)
     description = models.TextField(blank=True)
@@ -13,9 +11,6 @@ class ServiceCategory(models.Model):
         return self.name
 
 
-# =========================
-# SERVICE (single service)
-# =========================
 class Service(models.Model):
     PRICING_UNIT_CHOICES = [
         ("HOUR", "Per Hour"),
@@ -31,7 +26,7 @@ class Service(models.Model):
     description = models.TextField(blank=True)
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     pricing_unit = models.CharField(max_length=10, choices=PRICING_UNIT_CHOICES)
-    image = models.URLField(blank=True, null=True)  # ✅ added
+    image = models.ImageField(upload_to="services/", blank=True, null=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -39,9 +34,7 @@ class Service(models.Model):
         return self.name
 
 
-# =========================
-# PACKAGE (USP)
-# =========================
+
 class ServicePackage(models.Model):
     """
     A package is a bundle of services (e.g., "Basic Plumbing Package")
@@ -62,9 +55,7 @@ class ServicePackage(models.Model):
         )
 
 
-# =========================
-# PACKAGE ITEMS
-# =========================
+
 class ServicePackageItem(models.Model):
     package = models.ForeignKey(
         ServicePackage,

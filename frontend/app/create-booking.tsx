@@ -16,10 +16,11 @@ import { createBooking, createNegotiation } from "../src/api/bookings";
 import MapPicker from "../components/MapPicker";
 
 export default function CreateBooking() {
-  const { serviceId, mode } = useLocalSearchParams();
+  const { serviceId, packageId, mode } = useLocalSearchParams();
   const router = useRouter();
 
   const bookingMode = mode === "negotiation" ? "negotiation" : "base";
+  const isPackageBooking = !!packageId;
 
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
@@ -83,8 +84,8 @@ export default function CreateBooking() {
   }
 
   async function handleBooking() {
-    if (!serviceId) {
-      Alert.alert("Service not found");
+    if (!serviceId && !packageId) {
+      Alert.alert("Selection missing", "Please choose a service or package.");
       return;
     }
 
@@ -95,6 +96,14 @@ export default function CreateBooking() {
 
     if (bookingMode === "negotiation" && !offerPrice.trim()) {
       Alert.alert("Please enter your offer price");
+      return;
+    }
+
+    if (isPackageBooking && bookingMode === "negotiation") {
+      Alert.alert(
+        "Package booking",
+        "Negotiation is not available for packages right now."
+      );
       return;
     }
 
@@ -111,14 +120,23 @@ export default function CreateBooking() {
         ? `${address.trim()} (${pickedCoords.lat}, ${pickedCoords.lng})`
         : address.trim();
 
-      const booking = await createBooking({
-        service: Number(serviceId),
+      const bookingPayload: any = {
         address: finalAddress,
         notes: notes.trim(),
         scheduled_at: scheduledAt.toISOString(),
-      });
+      };
 
-      if (bookingMode === "negotiation") {
+      if (serviceId) {
+        bookingPayload.service = Number(serviceId);
+      }
+
+      if (packageId) {
+        bookingPayload.package = Number(packageId);
+      }
+
+      const booking = await createBooking(bookingPayload);
+
+      if (bookingMode === "negotiation" && serviceId) {
         await createNegotiation(booking.id, {
           proposed_price: offerPrice.trim(),
           message: offerMessage.trim(),
@@ -131,7 +149,9 @@ export default function CreateBooking() {
       } else {
         Alert.alert(
           "Booking Created",
-          "Your booking was created successfully at the base price."
+          isPackageBooking
+            ? "Your package booking was created successfully."
+            : "Your booking was created successfully at the base price."
         );
       }
 
@@ -166,11 +186,17 @@ export default function CreateBooking() {
         </View>
 
         <Text style={styles.title}>
-          {bookingMode === "negotiation" ? "Negotiate Service" : "Schedule Service"}
+          {isPackageBooking
+            ? "Schedule Package"
+            : bookingMode === "negotiation"
+            ? "Negotiate Service"
+            : "Schedule Service"}
         </Text>
 
         <Text style={styles.subtitle}>
-          {bookingMode === "negotiation"
+          {isPackageBooking
+            ? "Choose your preferred schedule and confirm your package booking."
+            : bookingMode === "negotiation"
             ? "Set your schedule and send an offer price to the worker."
             : "Choose your preferred schedule and confirm at the base price."}
         </Text>
@@ -289,7 +315,7 @@ export default function CreateBooking() {
         />
       </View>
 
-      {bookingMode === "negotiation" ? (
+      {!isPackageBooking && bookingMode === "negotiation" ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Your Offer</Text>
           <Text style={styles.sectionHint}>
@@ -318,15 +344,16 @@ export default function CreateBooking() {
         <View style={styles.infoCard}>
           <Ionicons name="cash-outline" size={18} color="#B45309" />
           <Text style={styles.infoText}>
-            You are booking this service at the base price. The worker can claim
-            your booking directly.
+            {isPackageBooking
+              ? "You are booking a package at a fixed package price."
+              : "You are booking this service at the base price. The worker can claim your booking directly."}
           </Text>
         </View>
       )}
 
       <TouchableOpacity style={styles.button} onPress={handleBooking}>
         <Text style={styles.buttonText}>
-          {bookingMode === "negotiation"
+          {!isPackageBooking && bookingMode === "negotiation"
             ? "Create Booking & Send Offer"
             : "Confirm Booking"}
         </Text>

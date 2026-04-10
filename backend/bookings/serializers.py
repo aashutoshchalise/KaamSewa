@@ -10,7 +10,6 @@ class BookingListSerializer(serializers.ModelSerializer):
     service_pricing_unit = serializers.SerializerMethodField()
     package_name = serializers.CharField(source="package.name", read_only=True)
 
-    # negotiation info
     negotiation_id = serializers.SerializerMethodField()
     negotiated_price = serializers.SerializerMethodField()
     negotiation_message = serializers.SerializerMethodField()
@@ -18,17 +17,14 @@ class BookingListSerializer(serializers.ModelSerializer):
     negotiation_proposed_by = serializers.SerializerMethodField()
     negotiation_proposed_by_username = serializers.SerializerMethodField()
 
-    # client info
     client_username = serializers.SerializerMethodField()
     client_phone = serializers.SerializerMethodField()
 
-    # worker info
     worker_username = serializers.SerializerMethodField()
     worker_phone = serializers.SerializerMethodField()
     worker_avg_rating = serializers.SerializerMethodField()
     worker_review_count = serializers.SerializerMethodField()
 
-    # booking-specific review info
     review_id = serializers.SerializerMethodField()
     review_rating = serializers.SerializerMethodField()
     review_comment = serializers.SerializerMethodField()
@@ -99,13 +95,25 @@ class BookingListSerializer(serializers.ModelSerializer):
         return None
 
     def get_service_name(self, obj):
-        return obj.service.name if obj.service_id else None
+        if obj.service_id:
+            return obj.service.name
+        if obj.package_id:
+            return obj.package.name
+        return None
 
     def get_service_price(self, obj):
-        return str(obj.service.base_price) if obj.service_id else None
+        if obj.service_id:
+            return str(obj.service.base_price)
+        if obj.package_id:
+            return str(obj.package.total_base_price)
+        return None
 
     def get_service_pricing_unit(self, obj):
-        return obj.service.pricing_unit if obj.service_id else None
+        if obj.service_id:
+            return obj.service.pricing_unit
+        if obj.package_id:
+            return "FIXED"
+        return None
 
     def get_negotiation_id(self, obj):
         negotiation = self._latest_negotiation(obj)
@@ -185,10 +193,12 @@ class BookingCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         service = attrs.get("service")
         package = attrs.get("package")
+
         if not service and not package:
             raise serializers.ValidationError("Either 'service' or 'package' is required.")
         if service and package:
             raise serializers.ValidationError("Provide only one: 'service' OR 'package', not both.")
+
         return attrs
 
     def create(self, validated_data):

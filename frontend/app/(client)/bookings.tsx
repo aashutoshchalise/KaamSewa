@@ -57,11 +57,14 @@ export default function ClientBookings() {
               onPress={() => router.push(`/(client)/booking/${item.id}`)}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.service}>{item.service_name}</Text>
+              <Text style={styles.service}>
+                {item.package_name || item.service_name || "Booking"}
+              </Text>
 
-                <Text style={styles.price}>
-                  Rs. {item.service_price} / {item.service_pricing_unit}
-                </Text>
+              <Text style={styles.price}>
+                Rs. {item.service_price}
+                {item.service_pricing_unit ? ` / ${item.service_pricing_unit}` : ""}
+              </Text>
 
                 <View
                   style={[

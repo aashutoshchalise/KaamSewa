@@ -12,18 +12,24 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../src/store/AuthContext";
 import { useQuery } from "@tanstack/react-query";
-import { getServiceList } from "../../src/api/services";
+import { getServiceList, getPackageList } from "../../src/api/services";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
+import type { ServicePackage } from "../../src/types";
 
 export default function ClientHome() {
   const { user } = useAuth();
   const router = useRouter();
   const [search, setSearch] = useState("");
 
-  const { data: services, isLoading } = useQuery({
+  const { data: services = [], isLoading } = useQuery({
     queryKey: ["services"],
     queryFn: getServiceList,
+  });
+
+  const { data: packages = [] } = useQuery<ServicePackage[]>({
+    queryKey: ["packages"],
+    queryFn: getPackageList,
   });
 
   const filteredServices = useMemo(() => {
@@ -34,6 +40,15 @@ export default function ClientHome() {
       item.name.toLowerCase().includes(search.trim().toLowerCase())
     );
   }, [services, search]);
+
+  const filteredPackages = useMemo(() => {
+    if (!packages) return [];
+    if (!search.trim()) return packages;
+
+    return packages.filter((item) =>
+      item.name.toLowerCase().includes(search.trim().toLowerCase())
+    );
+  }, [packages, search]);
 
   return (
     <ScrollView
@@ -50,22 +65,27 @@ export default function ClientHome() {
           </View>
 
           <TouchableOpacity
-              style={styles.iconButton}
-              onPress={() => router.push("/(client)/notifications")}
-            >
-              <Ionicons name="notifications-outline" size={22} color="#111111" />
-            </TouchableOpacity>
+            style={styles.iconButton}
+            onPress={() => router.push("/(client)/notifications")}
+          >
+            <Ionicons
+              name="notifications-outline"
+              size={22}
+              color="#111111"
+            />
+          </TouchableOpacity>
         </View>
 
         <Text style={styles.greeting}>Hi, {user?.username}</Text>
         <Text style={styles.sub}>
-          Book trusted services, compare offers, and manage everything in one place.
+          Book trusted services, compare offers, and manage everything in one
+          place.
         </Text>
 
         <View style={styles.searchBox}>
           <Ionicons name="search-outline" size={18} color="#6B7280" />
           <TextInput
-            placeholder="Search services..."
+            placeholder="Search services or packages..."
             value={search}
             onChangeText={setSearch}
             style={styles.searchInput}
@@ -80,10 +100,16 @@ export default function ClientHome() {
           onPress={() => router.push("/(client)/bookings")}
         >
           <View style={styles.quickActionIcon}>
-            <Ionicons name="document-text-outline" size={20} color="#111111" />
+            <Ionicons
+              name="document-text-outline"
+              size={20}
+              color="#111111"
+            />
           </View>
           <Text style={styles.quickActionTitle}>My Bookings</Text>
-          <Text style={styles.quickActionText}>Track all your service requests</Text>
+          <Text style={styles.quickActionText}>
+            Track all your service requests
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -164,12 +190,44 @@ export default function ClientHome() {
 
                 <View style={styles.cardFooter}>
                   <Text style={styles.cardLink}>View Details</Text>
-                  <Ionicons name="arrow-forward-outline" size={16} color="#111111" />
+                  <Ionicons
+                    name="arrow-forward-outline"
+                    size={16}
+                    color="#111111"
+                  />
                 </View>
               </View>
             </TouchableOpacity>
           )}
         />
+      )}
+
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Service Packages</Text>
+        <Text style={styles.sectionCount}>
+          {filteredPackages?.length ?? 0} available
+        </Text>
+      </View>
+
+      {filteredPackages.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons name="cube-outline" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyTitle}>No packages found</Text>
+          <Text style={styles.emptyText}>
+            Packages added by admin will appear here.
+          </Text>
+        </View>
+      ) : (
+        filteredPackages.map((pkg) => (
+          <TouchableOpacity
+            key={pkg.id}
+            style={styles.packageCard}
+            onPress={() => router.push(`/package/${pkg.id}`)}
+          >
+            <Text style={styles.packageTitle}>{pkg.name}</Text>
+            <Text style={styles.packagePrice}>Rs. {pkg.total_base_price}</Text>
+          </TouchableOpacity>
+        ))
       )}
     </ScrollView>
   );
@@ -328,6 +386,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
+    marginTop: 8,
   },
 
   sectionTitle: {
@@ -358,6 +417,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 28,
     alignItems: "center",
+    marginBottom: 14,
   },
 
   emptyTitle: {
@@ -431,6 +491,25 @@ const styles = StyleSheet.create({
   cardLink: {
     fontSize: 13,
     color: "#111111",
+    fontWeight: "600",
+  },
+
+  packageCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 10,
+  },
+
+  packageTitle: {
+    fontWeight: "bold",
+    fontSize: 15,
+    color: "#111111",
+  },
+
+  packagePrice: {
+    marginTop: 6,
+    color: "#F4B400",
     fontWeight: "600",
   },
 });

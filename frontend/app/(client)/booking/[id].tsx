@@ -185,8 +185,9 @@ export default function BookingDetailScreen() {
             </View>
           </View>
 
-          <Text style={styles.heroTitle}>{booking.service_name}</Text>
-          <Text style={styles.heroSubtitle}>Booking Details</Text>
+          <Text style={styles.heroTitle}>
+            {booking.package_name || booking.service_name || "Booking"}
+          </Text>
         </View>
 
         <View style={styles.card}>
@@ -227,14 +228,17 @@ export default function BookingDetailScreen() {
           <View style={styles.infoRow}>
             <Ionicons name="cash-outline" size={18} color="#6B7280" />
             <View style={styles.infoTextWrap}>
-              <Text style={styles.infoLabel}>Base Price</Text>
-              <Text style={styles.infoValue}>
-                Rs. {booking.service_price} / {booking.service_pricing_unit}
-              </Text>
+            <Text style={styles.infoLabel}>
+              {booking.package_name ? "Package Price" : "Base Price"}
+            </Text>
+            <Text style={styles.infoValue}>
+              Rs. {booking.service_price}
+              {booking.service_pricing_unit ? ` / ${booking.service_pricing_unit}` : ""}
+            </Text>
             </View>
           </View>
         </View>
-
+\
         {canCancel && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Booking Action</Text>

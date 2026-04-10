@@ -1,6 +1,5 @@
 from decimal import Decimal
 from django.db import transaction
-from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -37,6 +36,14 @@ def log_event(*, booking: Booking, event_type: str, actor):
     )
 
 
+def get_booking_subject(booking: Booking) -> str:
+    if booking.service_id:
+        return booking.service.name
+    if booking.package_id:
+        return booking.package.name
+    return "service"
+
+
 def get_booking_amount(booking: Booking) -> Decimal:
     if booking.final_price:
         return booking.final_price
@@ -44,8 +51,10 @@ def get_booking_amount(booking: Booking) -> Decimal:
     if booking.service:
         return booking.service.base_price
 
-    return Decimal("0.00")
+    if booking.package:
+        return Decimal(str(booking.package.total_base_price))
 
+    return Decimal("0.00")
 
 
 class CreateBookingView(APIView):
@@ -68,11 +77,10 @@ class CreateBookingView(APIView):
         Notification.objects.create(
             user=booking.client,
             title="Booking Created",
-            message=f"You booked {booking.service.name}",
+            message=f"You booked {get_booking_subject(booking)}",
         )
 
         return Response(BookingListSerializer(booking).data)
-
 
 
 class MyBookingsView(APIView):
@@ -82,14 +90,13 @@ class MyBookingsView(APIView):
         role = role_of(request.user)
 
         if role == "CLIENT":
-            qs = Booking.objects.filter(client=request.user)
+            qs = Booking.objects.filter(client=request.user).order_by("-created_at")
         elif role == "WORKER":
-            qs = Booking.objects.filter(worker=request.user)
+            qs = Booking.objects.filter(worker=request.user).order_by("-created_at")
         else:
-            qs = Booking.objects.all()
+            qs = Booking.objects.all().order_by("-created_at")
 
         return Response(BookingListSerializer(qs, many=True).data)
-
 
 
 class AvailableBookingsForWorkerView(APIView):
@@ -99,7 +106,7 @@ class AvailableBookingsForWorkerView(APIView):
         if not is_worker(request.user):
             return Response({"detail": "Only WORKER"}, status=403)
 
-        qs = Booking.objects.filter(worker__isnull=True, status="PENDING")
+        qs = Booking.objects.filter(worker__isnull=True, status="PENDING").order_by("-created_at")
         return Response(BookingListSerializer(qs, many=True).data)
 
 
@@ -118,7 +125,7 @@ class ClaimBookingView(APIView):
 
             booking.worker = request.user
             booking.status = "ACCEPTED"
-            booking.save()
+            booking.save(update_fields=["worker", "status", "updated_at"])
 
             Notification.objects.create(
                 user=booking.client,
@@ -127,7 +134,6 @@ class ClaimBookingView(APIView):
             )
 
         return Response(BookingListSerializer(booking).data)
-
 
 
 class StartJobView(APIView):
@@ -140,7 +146,7 @@ class StartJobView(APIView):
             return Response({"detail": "Not yours"}, status=403)
 
         booking.status = "IN_PROGRESS"
-        booking.save()
+        booking.save(update_fields=["status", "updated_at"])
 
         Notification.objects.create(
             user=booking.client,
@@ -179,10 +185,7 @@ class CompleteJobView(APIView):
             payment = Payment.objects.filter(booking=booking).first()
 
             if not payment:
-                total_amount = Decimal(
-                    str(booking.final_price if booking.final_price is not None else get_booking_amount(booking))
-                ).quantize(Decimal("0.01"))
-
+                total_amount = Decimal(str(get_booking_amount(booking))).quantize(Decimal("0.01"))
                 commission_rate = Decimal("0.20")
                 commission_amount = (total_amount * commission_rate).quantize(Decimal("0.01"))
                 worker_earning = (total_amount - commission_amount).quantize(Decimal("0.01"))

@@ -3,33 +3,20 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# =========================
-# SECURITY
-# =========================
 SECRET_KEY = "django-insecure-change-this-later"
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
-# =========================
-# APPLICATIONS
-# =========================
 INSTALLED_APPS = [
-    # Admin theme
     "jazzmin",
-
-    # Django default apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    # Third-party
     "rest_framework",
     "corsheaders",
-
-    # Local apps
     "accounts.apps.AccountsConfig",
     "services",
     "bookings",
@@ -41,7 +28,6 @@ JAZZMIN_SETTINGS = {
     "site_title": "KaamSewa Admin",
     "site_header": "KaamSewa Administration",
     "site_brand": "KaamSewa",
-
     "icons": {
         "accounts.user": "fas fa-user",
         "accounts.workerprofile": "fas fa-user-cog",
@@ -52,7 +38,6 @@ JAZZMIN_SETTINGS = {
         "reviews.review": "fas fa-star",
         "payments.payment": "fas fa-credit-card",
     },
-
     "order_with_respect_to": [
         "accounts",
         "services",
@@ -62,14 +47,8 @@ JAZZMIN_SETTINGS = {
     ],
 }
 
-# =========================
-# CUSTOM USER MODEL
-# =========================
 AUTH_USER_MODEL = "accounts.CustomUser"
 
-# =========================
-# MIDDLEWARE
-# =========================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -81,16 +60,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# =========================
-# CORS (Frontend access)
-# =========================
 CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = "kaamsewa.urls"
 
-# =========================
-# TEMPLATES
-# =========================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -109,9 +82,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "kaamsewa.wsgi.application"
 
-# =========================
-# DATABASE (MySQL)
-# =========================
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -120,13 +90,12 @@ DATABASES = {
         "PASSWORD": "aashu1797*",
         "HOST": "127.0.0.1",
         "PORT": "3306",
-        "OPTIONS": {"charset": "utf8mb4"},
+        "OPTIONS": {
+            "charset": "utf8mb4",
+        },
     }
 }
 
-# =========================
-# PASSWORD VALIDATION
-# =========================
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -134,23 +103,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-# =========================
-# INTERNATIONALIZATION
-# =========================
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Kathmandu"
 USE_I18N = True
 USE_TZ = True
 
-# =========================
-# STATIC FILES
-# =========================
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# ============================
-# DJANGO REST FRAMEWORK + JWT
-# ============================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
@@ -168,6 +128,7 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-ALLOWED_HOSTS = ["*"]
-
 APPEND_SLASH = False
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"

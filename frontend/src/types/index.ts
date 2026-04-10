@@ -70,3 +70,19 @@ export type Service = {
   pricing_unit: string;
   image?: string | null;
 };
+
+export type ServicePackageItem = {
+  id: number;
+  service: number;
+  service_name: string;
+  service_base_price: string;
+  quantity: number;
+};
+
+export type ServicePackage = {
+  id: number;
+  name: string;
+  description: string;
+  items: ServicePackageItem[];
+  total_base_price: string;
+};
