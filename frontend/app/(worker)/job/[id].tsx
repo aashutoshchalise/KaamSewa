@@ -6,97 +6,93 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  TextInput,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getMyBookings,
+  getBookingDetail,
+  claimJob,
   startJob,
   completeJob,
-  createNegotiation,
-  acceptNegotiation,
 } from "../../../src/api/bookings";
 import type { Booking } from "../../../src/types";
-import { getStatusMeta } from "../../../src/utils/status";
 
-export default function WorkerJobDetail() {
+function getStatusMeta(status: string) {
+  switch (status) {
+    case "PENDING":
+      return { label: "Pending", bg: "#FEF3C7", text: "#B45309" };
+    case "NEGOTIATING":
+      return { label: "Negotiating", bg: "#FCE7F3", text: "#BE185D" };
+    case "ACCEPTED":
+      return { label: "Accepted", bg: "#DBEAFE", text: "#1D4ED8" };
+    case "IN_PROGRESS":
+      return { label: "In Progress", bg: "#EDE9FE", text: "#6D28D9" };
+    case "COMPLETED":
+      return { label: "Completed", bg: "#DCFCE7", text: "#15803D" };
+    case "CANCELED":
+      return { label: "Canceled", bg: "#FEE2E2", text: "#B91C1C" };
+    default:
+      return { label: status, bg: "#E5E7EB", text: "#374151" };
+  }
+}
+
+export default function WorkerJobDetailScreen() {
   const { id } = useLocalSearchParams();
+  const router = useRouter();
   const queryClient = useQueryClient();
+  const numericId = Number(id);
 
-  const [proposedPrice, setProposedPrice] = useState("");
-  const [message, setMessage] = useState("");
+  const { data: booking, isLoading } = useQuery<Booking>({
+    queryKey: ["booking-detail", numericId],
+    queryFn: () => getBookingDetail(numericId),
+    enabled: !!numericId,
+  });
 
-  const { data, isLoading } = useQuery<Booking[]>({
-    queryKey: ["worker-my-jobs"],
-    queryFn: getMyBookings,
+  const claimMutation = useMutation({
+    mutationFn: claimJob,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["available-jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["my-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["booking-detail", numericId] }),
+      ]);
+      Alert.alert("Success", "Job claimed successfully.");
+    },
+    onError: (err: any) => {
+      Alert.alert("Claim Failed", JSON.stringify(err?.response?.data || err?.message));
+    },
   });
 
   const startMutation = useMutation({
     mutationFn: startJob,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
-      Alert.alert("Job started");
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["available-jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["my-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["booking-detail", numericId] }),
+      ]);
+      Alert.alert("Success", "Job started successfully.");
     },
     onError: (err: any) => {
-      Alert.alert(
-        "Could not start job",
-        JSON.stringify(err?.response?.data || err?.message)
-      );
+      Alert.alert("Start Failed", JSON.stringify(err?.response?.data || err?.message));
     },
   });
 
   const completeMutation = useMutation({
     mutationFn: completeJob,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
-      Alert.alert("Job completed");
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["available-jobs"] }),
+        queryClient.invalidateQueries({ queryKey: ["my-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["booking-detail", numericId] }),
+      ]);
+      Alert.alert("Success", "Job completed successfully.");
     },
     onError: (err: any) => {
-      Alert.alert(
-        "Could not complete job",
-        JSON.stringify(err?.response?.data || err?.message)
-      );
-    },
-  });
-
-  const acceptOfferMutation = useMutation({
-    mutationFn: acceptNegotiation,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
-      Alert.alert("Client offer accepted");
-    },
-    onError: (err: any) => {
-      Alert.alert(
-        "Could not accept offer",
-        JSON.stringify(err?.response?.data || err?.message)
-      );
-    },
-  });
-
-  const negotiationMutation = useMutation({
-    mutationFn: (payload: {
-      bookingId: number;
-      proposed_price: string;
-      message: string;
-    }) =>
-      createNegotiation(payload.bookingId, {
-        proposed_price: payload.proposed_price,
-        message: payload.message,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["worker-my-jobs"] });
-      setProposedPrice("");
-      setMessage("");
-      Alert.alert("Counter offer sent to client");
-    },
-    onError: (err: any) => {
-      Alert.alert(
-        "Could not send counter offer",
-        JSON.stringify(err?.response?.data || err?.message)
-      );
+      Alert.alert("Complete Failed", JSON.stringify(err?.response?.data || err?.message));
     },
   });
 
@@ -108,667 +104,417 @@ export default function WorkerJobDetail() {
     );
   }
 
-  const job = data?.find((b) => b.id === Number(id));
-
-  if (!job) {
+  if (!booking) {
     return (
       <View style={styles.center}>
-        <Text style={{ color: "#666" }}>Job not found</Text>
+        <Text style={styles.emptyText}>Booking not found</Text>
       </View>
     );
   }
 
-  const currentJob = job;
-  const statusMeta = getStatusMeta(currentJob.status);
+  const statusMeta = getStatusMeta(booking.status);
 
-  const negotiationId = currentJob.negotiation_id;
-  const negotiatedPrice = currentJob.negotiated_price;
-  const negotiationMessage = currentJob.negotiation_message;
-  const negotiationProposedBy = currentJob.negotiation_proposed_by;
-  const negotiationProposedByUsername =
-    currentJob.negotiation_proposed_by_username;
+  const isNegotiated =
+    !!booking.final_price &&
+    !!booking.service_price &&
+    String(booking.final_price) !== String(booking.service_price);
 
-  const hasNegotiation = !!negotiationId;
+  const canClaim =
+    booking.worker == null &&
+    ["PENDING", "NEGOTIATING"].includes(booking.status);
 
-  const isClientOfferOpen =
-    currentJob.status === "NEGOTIATING" &&
-    negotiationId &&
-    negotiationProposedBy &&
-    Number(negotiationProposedBy) === Number(currentJob.client);
+  const canNegotiate =
+    ["PENDING", "NEGOTIATING", "ACCEPTED"].includes(booking.status);
 
-  const isBasePriceFlow =
-    currentJob.status === "CLAIMED" && !hasNegotiation;
-
-  const displayedPrice = currentJob.final_price || currentJob.service_price;
-
-  function handleCounterOffer() {
-    const priceToSend = proposedPrice.trim();
-
-    if (!priceToSend) {
-      Alert.alert("Enter a counter-offer price");
-      return;
-    }
-
-    negotiationMutation.mutate({
-      bookingId: currentJob.id,
-      proposed_price: priceToSend,
-      message: message.trim(),
-    });
-  }
-
-  function handleAcceptClientOffer() {
-    if (!negotiationId) {
-      Alert.alert("Offer not found");
-      return;
-    }
-
-    acceptOfferMutation.mutate(Number(negotiationId));
-  }
+  const canStart = booking.worker != null && booking.status === "ACCEPTED";
+  const canComplete = booking.worker != null && booking.status === "IN_PROGRESS";
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.heroCard}>
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="briefcase-outline" size={24} color="#111111" />
-          </View>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroIcon}>
+              <Ionicons name="briefcase-outline" size={24} color="#111111" />
+            </View>
 
-          <View
-            style={[
-              styles.statusBadge,
-              { backgroundColor: statusMeta.bgColor },
-            ]}
-          >
-            <Text
-              style={[
-                styles.statusText,
-                { color: statusMeta.textColor },
-              ]}
-            >
-              {statusMeta.label}
-            </Text>
-          </View>
-        </View>
-
-        <Text style={styles.heroTitle}>{currentJob.service_name}</Text>
-        <Text style={styles.heroSubtitle}>Job Details & Client Updates</Text>
-
-        <View style={styles.pricePanel}>
-          <Text style={styles.priceLabel}>
-            {currentJob.final_price ? "Agreed Price" : "Base Price"}
-          </Text>
-          <Text style={styles.priceValue}>
-            Rs {displayedPrice}
-            <Text style={styles.priceUnit}> / {currentJob.service_pricing_unit}</Text>
-          </Text>
-        </View>
-
-        {currentJob.final_price &&
-        currentJob.service_price !== currentJob.final_price ? (
-          <Text style={styles.originalPriceText}>
-            Original base price: Rs {currentJob.service_price} /{" "}
-            {currentJob.service_pricing_unit}
-          </Text>
-        ) : null}
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Job Information</Text>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="location-outline" size={18} color="#6B7280" />
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Address</Text>
-            <Text style={styles.infoValue}>{currentJob.address}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="document-text-outline" size={18} color="#6B7280" />
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Notes</Text>
-            <Text style={styles.infoValue}>
-              {currentJob.notes ? currentJob.notes : "No instructions"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="time-outline" size={18} color="#6B7280" />
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Scheduled Time</Text>
-            <Text style={styles.infoValue}>
-              {currentJob.scheduled_at
-                ? new Date(currentJob.scheduled_at).toLocaleString()
-                : "Not scheduled"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Client Contact</Text>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="person-outline" size={18} color="#6B7280" />
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Name</Text>
-            <Text style={styles.infoValue}>
-              {currentJob.client_username || "Not available"}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="call-outline" size={18} color="#6B7280" />
-          <View style={styles.infoTextWrap}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            <Text style={styles.infoValue}>
-              {currentJob.client_phone || "Not available"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {currentJob.review_id ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Review For This Job</Text>
-
-          <View style={styles.reviewHeader}>
-            <View style={styles.reviewBadge}>
-              <Text style={styles.reviewBadgeText}>
-                ⭐ {currentJob.review_rating} / 5
+            <View style={[styles.statusBadge, { backgroundColor: statusMeta.bg }]}>
+              <Text style={[styles.statusBadgeText, { color: statusMeta.text }]}>
+                {statusMeta.label}
               </Text>
             </View>
           </View>
 
-          <Text style={styles.reviewComment}>
-            {currentJob.review_comment?.trim()
-              ? `"${currentJob.review_comment}"`
-              : "No written review"}
+          <Text style={styles.heroTitle}>
+            {booking.package_name || booking.service_name || "Booking"}
           </Text>
+          <Text style={styles.heroSubtitle}>Job Details & Negotiation</Text>
 
-          <Text style={styles.reviewMeta}>
-            By {currentJob.review_client_username || "Client"}
-          </Text>
+          <View style={styles.heroPriceBox}>
+            <Text style={styles.heroPriceLabel}>Base Price</Text>
+            <Text style={styles.heroPrice}>
+              Rs {booking.service_price}
+              {booking.service_pricing_unit ? ` / ${booking.service_pricing_unit}` : ""}
+            </Text>
 
-          <Text style={styles.reviewMetaMuted}>
-            {currentJob.review_created_at
-              ? new Date(currentJob.review_created_at).toLocaleString()
-              : "Not available"}
-          </Text>
+            {isNegotiated && (
+              <>
+                <Text style={styles.heroNegotiatedLabel}>Current Negotiated Price</Text>
+                <Text style={styles.heroNegotiatedPrice}>Rs {booking.final_price}</Text>
+              </>
+            )}
+          </View>
         </View>
-      ) : currentJob.status === "COMPLETED" ? (
+
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Review For This Job</Text>
-          <Text style={styles.infoText}>
-            The client has not reviewed this job yet.
-          </Text>
-        </View>
-      ) : null}
+          <Text style={styles.sectionTitle}>Job Information</Text>
 
-      {isBasePriceFlow && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Base Price Booking</Text>
-          <Text style={styles.infoText}>
-            The client chose to continue with the base price. You can start the
-            job directly, or send a counter-offer if needed.
-          </Text>
-
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => startMutation.mutate(currentJob.id)}
-            disabled={startMutation.isPending}
-          >
-            <Ionicons name="play-outline" size={18} color="#111111" />
-            <Text style={styles.primaryButtonText}>
-              {startMutation.isPending ? "Starting..." : "Start Job"}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.helperText}>or send a counter-offer</Text>
-
-          <TextInput
-            value={proposedPrice}
-            onChangeText={setProposedPrice}
-            placeholder="Enter counter-offer price"
-            placeholderTextColor="#888"
-            keyboardType="numeric"
-            style={styles.input}
-          />
-
-          <TextInput
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Optional message to client"
-            placeholderTextColor="#888"
-            multiline
-            style={[styles.input, styles.textarea]}
-          />
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={handleCounterOffer}
-            disabled={negotiationMutation.isPending}
-          >
-            <Ionicons name="swap-horizontal-outline" size={18} color="#F4B400" />
-            <Text style={styles.secondaryButtonText}>
-              {negotiationMutation.isPending ? "Sending..." : "Send Counter Offer"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {currentJob.status === "NEGOTIATING" && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Negotiation</Text>
-
-          <View style={styles.offerBox}>
-            <Text style={styles.offerLabel}>Latest Offer</Text>
-            <Text style={styles.offerValue}>
-              {negotiatedPrice ? `Rs ${negotiatedPrice}` : "Offer available"}
-            </Text>
-
-            <Text style={styles.offerLabel}>Message</Text>
-            <Text style={styles.offerText}>
-              {negotiationMessage ? negotiationMessage : "No message provided"}
-            </Text>
-
-            <Text style={styles.offerLabel}>Proposed By</Text>
-            <Text style={styles.offerText}>
-              {negotiationProposedByUsername || "Unknown"}
-            </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="location-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Address</Text>
+              <Text style={styles.infoValue}>{booking.address}</Text>
+            </View>
           </View>
 
-          {isClientOfferOpen ? (
-            <>
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={handleAcceptClientOffer}
-                disabled={acceptOfferMutation.isPending}
-              >
-                <Ionicons name="checkmark-outline" size={18} color="#111111" />
-                <Text style={styles.primaryButtonText}>
-                  {acceptOfferMutation.isPending
-                    ? "Accepting..."
-                    : "Accept Client Offer"}
-                </Text>
-              </TouchableOpacity>
+          <View style={styles.infoRow}>
+            <Ionicons name="document-text-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Notes</Text>
+              <Text style={styles.infoValue}>{booking.notes || "No notes"}</Text>
+            </View>
+          </View>
 
-              <Text style={styles.helperText}>or send a counter-offer</Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Scheduled</Text>
+              <Text style={styles.infoValue}>
+                {booking.scheduled_at
+                  ? new Date(booking.scheduled_at).toLocaleString()
+                  : "Not scheduled yet"}
+              </Text>
+            </View>
+          </View>
 
-              <TextInput
-                value={proposedPrice}
-                onChangeText={setProposedPrice}
-                placeholder="Enter counter-offer price"
-                placeholderTextColor="#888"
-                keyboardType="numeric"
-                style={styles.input}
-              />
+          <View style={styles.infoRow}>
+            <Ionicons name="person-outline" size={18} color="#6B7280" />
+            <View style={styles.infoTextWrap}>
+              <Text style={styles.infoLabel}>Client</Text>
+              <Text style={styles.infoValue}>{booking.client_username || "Client"}</Text>
+            </View>
+          </View>
 
-              <TextInput
-                value={message}
-                onChangeText={setMessage}
-                placeholder="Optional message to client"
-                placeholderTextColor="#888"
-                multiline
-                style={[styles.input, styles.textarea]}
-              />
-
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleCounterOffer}
-                disabled={negotiationMutation.isPending}
-              >
-                <Ionicons name="swap-horizontal-outline" size={18} color="#F4B400" />
-                <Text style={styles.secondaryButtonText}>
-                  {negotiationMutation.isPending ? "Sending..." : "Send Counter Offer"}
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.waitingCard}>
-              <Ionicons name="hourglass-outline" size={20} color="#F59E0B" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.waitingTitle}>Waiting for Client</Text>
-                <Text style={styles.waitingText}>
-                  You already sent the latest offer. Waiting for the client to
-                  respond.
-                </Text>
+          {booking.client_phone ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={18} color="#6B7280" />
+              <View style={styles.infoTextWrap}>
+                <Text style={styles.infoLabel}>Client Phone</Text>
+                <Text style={styles.infoValue}>{booking.client_phone}</Text>
               </View>
             </View>
-          )}
+          ) : null}
         </View>
-      )}
 
-      {currentJob.status === "ACCEPTED" && (
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => startMutation.mutate(currentJob.id)}
-          disabled={startMutation.isPending}
-        >
-          <Ionicons name="play-outline" size={18} color="#111111" />
-          <Text style={styles.primaryButtonText}>
-            {startMutation.isPending ? "Starting..." : "Start Job"}
-          </Text>
-        </TouchableOpacity>
-      )}
+        {canNegotiate && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Negotiation</Text>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={() =>
+                router.push({
+                  pathname: "/(common)/booking-chat",
+                  params: { bookingId: String(booking.id) },
+                })
+              }
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#111111" />
+              <Text style={styles.chatButtonText}>Open Negotiation Chat</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-      {currentJob.status === "IN_PROGRESS" && (
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => completeMutation.mutate(currentJob.id)}
-          disabled={completeMutation.isPending}
-        >
-          <Ionicons name="checkmark-done-outline" size={18} color="#111111" />
-          <Text style={styles.primaryButtonText}>
-            {completeMutation.isPending ? "Completing..." : "Complete Job"}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+        {canClaim && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Job Action</Text>
+            <TouchableOpacity
+              style={styles.claimButton}
+              onPress={() => claimMutation.mutate(booking.id)}
+              disabled={claimMutation.isPending}
+            >
+              <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>
+                {claimMutation.isPending ? "Claiming..." : "Claim Job"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {canStart && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Job Action</Text>
+            <TouchableOpacity
+              style={styles.startButton}
+              onPress={() => startMutation.mutate(booking.id)}
+              disabled={startMutation.isPending}
+            >
+              <Ionicons name="play-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>
+                {startMutation.isPending ? "Starting..." : "Start Job"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {canComplete && (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Job Action</Text>
+            <TouchableOpacity
+              style={styles.completeButton}
+              onPress={() => completeMutation.mutate(booking.id)}
+              disabled={completeMutation.isPending}
+            >
+              <Ionicons name="checkmark-done-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>
+                {completeMutation.isPending ? "Completing..." : "Complete Job"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {booking.review_id && (
+  <View style={styles.card}>
+    <Text style={styles.sectionTitle}>Client Review</Text>
+
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewTopRow}>
+        <View style={styles.reviewBadge}>
+          <Ionicons name="star" size={16} color="#F4B400" />
+          <Text style={styles.reviewRatingText}>{booking.review_rating}/5</Text>
+        </View>
+
+        <Text style={styles.reviewByText}>
+          by {booking.review_client_username || "Client"}
+        </Text>
+      </View>
+
+      <Text style={styles.reviewCommentText}>
+        {booking.review_comment || "No written comment provided."}
+      </Text>
+
+      {booking.review_created_at ? (
+        <Text style={styles.reviewDateText}>
+          {new Date(booking.review_created_at).toLocaleString()}
+        </Text>
+      ) : null}
+    </View>
+  </View>
+)}
+      </ScrollView>
+
+      
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-
-  content: {
-    padding: 20,
-    paddingTop: 50,
-    paddingBottom: 40,
-  },
-
+  safeArea: { flex: 1, backgroundColor: "#F8FAFC" },
+  container: { flex: 1, backgroundColor: "#F8FAFC" },
+  content: { padding: 20, paddingBottom: 40 },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
-
+  emptyText: { color: "#6B7280", fontSize: 15 },
   heroCard: {
     backgroundColor: "#111111",
     borderRadius: 24,
     padding: 22,
     marginBottom: 18,
   },
-
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   heroIcon: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: 16,
     backgroundColor: "#F4B400",
     justifyContent: "center",
     alignItems: "center",
   },
-
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
   heroTitle: {
     marginTop: 18,
     fontSize: 22,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-
   heroSubtitle: {
     marginTop: 6,
-    color: "#D1D5DB",
     fontSize: 14,
+    color: "#D1D5DB",
   },
-
-  pricePanel: {
-    backgroundColor: "#1F2937",
+  heroPriceBox: {
+    marginTop: 18,
+    backgroundColor: "#1E293B",
     borderRadius: 18,
     padding: 16,
-    marginTop: 18,
   },
-
-  priceLabel: {
-    color: "#9CA3AF",
+  heroPriceLabel: {
+    color: "#CBD5E1",
     fontSize: 13,
   },
-
-  priceValue: {
+  heroPrice: {
     marginTop: 6,
-    fontSize: 24,
-    fontWeight: "bold",
     color: "#FFFFFF",
+    fontSize: 20,
+    fontWeight: "700",
   },
-
-  priceUnit: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#D1D5DB",
-  },
-
-  originalPriceText: {
-    marginTop: 12,
-    color: "#D1D5DB",
+  heroNegotiatedLabel: {
+    marginTop: 14,
+    color: "#FBCFE8",
     fontSize: 13,
   },
-
+  heroNegotiatedPrice: {
+    marginTop: 4,
+    color: "#F9A8D4",
+    fontSize: 18,
+    fontWeight: "700",
+  },
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 22,
     padding: 18,
     marginBottom: 18,
   },
-
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111111",
-    marginBottom: 10,
+    marginBottom: 8,
   },
-
-  label: {
-    marginTop: 12,
-    color: "#6B7280",
-    fontSize: 13,
-  },
-
-  value: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#111111",
-    marginTop: 4,
-  },
-
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    alignSelf: "flex-start",
-  },
-
-  statusText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 12,
     marginTop: 14,
   },
-
   infoTextWrap: {
     flex: 1,
   },
-
   infoLabel: {
     fontSize: 13,
     color: "#6B7280",
     marginBottom: 4,
   },
-
   infoValue: {
     fontSize: 15,
     color: "#111111",
     fontWeight: "500",
     lineHeight: 21,
   },
-
-  reviewHeader: {
+  chatButton: {
+    marginTop: 8,
+    backgroundColor: "#FFC300",
+    height: 54,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
     flexDirection: "row",
-    justifyContent: "flex-start",
-    marginBottom: 14,
+    gap: 8,
   },
-
-  reviewBadge: {
-    backgroundColor: "#FFF7D6",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-
-  reviewBadgeText: {
-    color: "#B45309",
-    fontWeight: "700",
-    fontSize: 14,
-  },
-
-  reviewComment: {
-    fontSize: 16,
+  chatButtonText: {
     color: "#111111",
-    lineHeight: 24,
-    fontStyle: "italic",
+    fontWeight: "bold",
+    fontSize: 15,
+  },
+  claimButton: {
+    marginTop: 8,
+    backgroundColor: "#111111",
+    height: 54,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  startButton: {
+    marginTop: 8,
+    backgroundColor: "#2563EB",
+    height: 54,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  completeButton: {
+    marginTop: 8,
+    backgroundColor: "#16A34A",
+    height: 54,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 15,
   },
 
-  reviewMeta: {
-    marginTop: 16,
-    fontSize: 14,
-    color: "#111111",
-    fontWeight: "600",
-  },
-
-  reviewMetaMuted: {
-    marginTop: 4,
-    fontSize: 13,
-    color: "#6B7280",
-  },
-
-  offerBox: {
+  reviewCard: {
+    marginTop: 8,
     backgroundColor: "#F8FAFC",
     borderRadius: 18,
-    padding: 16,
-    marginTop: 6,
-  },
-
-  offerLabel: {
-    marginTop: 10,
-    color: "#6B7280",
-    fontSize: 13,
-  },
-
-  offerValue: {
-    marginTop: 4,
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#111111",
-  },
-
-  offerText: {
-    marginTop: 4,
-    fontSize: 15,
-    color: "#111111",
-    lineHeight: 22,
-  },
-
-  input: {
-    backgroundColor: "#F3F4F6",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: "#111111",
-    marginTop: 12,
-  },
-
-  textarea: {
-    minHeight: 100,
-    textAlignVertical: "top",
-  },
-
-  primaryButton: {
-    marginTop: 16,
-    backgroundColor: "#F4B400",
-    height: 56,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  primaryButtonText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    color: "#111111",
-  },
-
-  secondaryButton: {
-    marginTop: 14,
-    backgroundColor: "#111111",
-    height: 56,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-
-  secondaryButtonText: {
-    fontWeight: "bold",
-    fontSize: 16,
-    color: "#F4B400",
-  },
-
-  helperText: {
-    marginTop: 14,
-    color: "#6B7280",
-    fontSize: 13,
-  },
-
-  waitingCard: {
-    marginTop: 16,
-    backgroundColor: "#FFF7ED",
-    borderRadius: 16,
     padding: 14,
+  },
+  reviewTopRow: {
     flexDirection: "row",
-    gap: 10,
-    alignItems: "flex-start",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-
-  waitingTitle: {
+  reviewBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  reviewRatingText: {
     fontSize: 15,
-    fontWeight: "bold",
-    color: "#9A3412",
+    fontWeight: "700",
+    color: "#111111",
   },
-
-  waitingText: {
-    marginTop: 4,
-    color: "#9A3412",
-    lineHeight: 20,
-    fontSize: 14,
-  },
-
-  infoText: {
+  reviewByText: {
+    fontSize: 12,
     color: "#6B7280",
-    lineHeight: 22,
+  },
+  reviewCommentText: {
+    marginTop: 10,
     fontSize: 14,
+    color: "#111111",
+    lineHeight: 20,
+  },
+  reviewDateText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#6B7280",
   },
 });

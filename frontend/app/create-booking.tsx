@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { createBooking, createNegotiation } from "../src/api/bookings";
-import MapPicker from "../components/MapPicker";
+import LocationPicker from "../components/LocationPicker";
 
 export default function CreateBooking() {
   const { serviceId, packageId, mode } = useLocalSearchParams();
@@ -24,7 +24,6 @@ export default function CreateBooking() {
 
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-
   const [offerPrice, setOfferPrice] = useState("");
   const [offerMessage, setOfferMessage] = useState("");
 
@@ -89,13 +88,18 @@ export default function CreateBooking() {
       return;
     }
 
-    if (!address.trim()) {
-      Alert.alert("Address is required");
+    if (!pickedCoords) {
+      Alert.alert("Location is required", "Please choose a location on the map.");
       return;
     }
 
-    if (bookingMode === "negotiation" && !offerPrice.trim()) {
-      Alert.alert("Please enter your offer price");
+    if (!address.trim()) {
+      Alert.alert("Address is required", "Please select a valid address from the map.");
+      return;
+    }
+
+    if (!isPackageBooking && bookingMode === "negotiation" && !offerPrice.trim()) {
+      Alert.alert("Offer price required", "Please enter your offer price.");
       return;
     }
 
@@ -111,32 +115,38 @@ export default function CreateBooking() {
     const now = new Date();
 
     if (scheduledAt <= now) {
-      Alert.alert("Please choose a future date and time");
+      Alert.alert("Invalid schedule", "Please choose a future date and time.");
       return;
     }
 
     try {
-      const finalAddress = pickedCoords
-        ? `${address.trim()} (${pickedCoords.lat}, ${pickedCoords.lng})`
-        : address.trim();
+      const finalAddress = `${address.trim()} (${pickedCoords.lat.toFixed(
+        6
+      )}, ${pickedCoords.lng.toFixed(6)})`;
 
-      const bookingPayload: any = {
+      const payload: {
+        service?: number;
+        package?: number;
+        address: string;
+        notes: string;
+        scheduled_at: string;
+      } = {
         address: finalAddress,
         notes: notes.trim(),
         scheduled_at: scheduledAt.toISOString(),
       };
 
       if (serviceId) {
-        bookingPayload.service = Number(serviceId);
+        payload.service = Number(serviceId);
       }
 
       if (packageId) {
-        bookingPayload.package = Number(packageId);
+        payload.package = Number(packageId);
       }
 
-      const booking = await createBooking(bookingPayload);
+      const booking = await createBooking(payload);
 
-      if (bookingMode === "negotiation" && serviceId) {
+      if (!isPackageBooking && bookingMode === "negotiation") {
         await createNegotiation(booking.id, {
           proposed_price: offerPrice.trim(),
           message: offerMessage.trim(),
@@ -157,10 +167,13 @@ export default function CreateBooking() {
 
       router.replace("/(client)/bookings");
     } catch (err: any) {
-      Alert.alert(
-        "Booking failed",
-        JSON.stringify(err?.response?.data || err?.message || "Something went wrong")
-      );
+      const errorMessage =
+        err?.response?.data?.detail ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "Something went wrong";
+
+      Alert.alert("Booking failed", String(errorMessage));
     }
   }
 
@@ -176,7 +189,7 @@ export default function CreateBooking() {
         <View style={styles.heroIcon}>
           <Ionicons
             name={
-              bookingMode === "negotiation"
+              !isPackageBooking && bookingMode === "negotiation"
                 ? "swap-horizontal-outline"
                 : "calendar-outline"
             }
@@ -205,34 +218,23 @@ export default function CreateBooking() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Pick Service Location</Text>
         <Text style={styles.sectionHint}>
-          Tap on the map to select the location, then confirm the address below.
+          Search a place, use your current location, or drag the pin to the exact address.
         </Text>
 
-        <MapPicker
-          onLocationSelect={(lat, lng) => {
-            setPickedCoords({ lat, lng });
-            if (!address.trim()) {
-              setAddress(`${lat}, ${lng}`);
-            }
+        <LocationPicker
+          onLocationSelect={(location) => {
+            setPickedCoords({
+              lat: location.latitude,
+              lng: location.longitude,
+            });
+            setAddress(location.address);
           }}
         />
 
-        {pickedCoords ? (
-          <View style={styles.previewCard}>
-            <Ionicons name="location-outline" size={18} color="#15803D" />
-            <Text style={styles.previewText}>
-              Selected coordinates:{" "}
-              <Text style={styles.previewStrong}>
-                {pickedCoords.lat}, {pickedCoords.lng}
-              </Text>
-            </Text>
-          </View>
-        ) : null}
-
         <TextInput
-          placeholder="Enter full service address"
+          placeholder="Selected address will appear here"
           placeholderTextColor="#888"
-          style={[styles.input, { marginTop: 14 }]}
+          style={[styles.input, styles.addressInput]}
           value={address}
           onChangeText={setAddress}
           multiline
@@ -345,7 +347,7 @@ export default function CreateBooking() {
           <Ionicons name="cash-outline" size={18} color="#B45309" />
           <Text style={styles.infoText}>
             {isPackageBooking
-              ? "You are booking a package at a fixed package price."
+              ? "You are booking this package at a fixed package price."
               : "You are booking this service at the base price. The worker can claim your booking directly."}
           </Text>
         </View>
@@ -432,6 +434,12 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     fontSize: 15,
     color: "#111111",
+  },
+
+  addressInput: {
+    marginTop: 14,
+    minHeight: 90,
+    textAlignVertical: "top",
   },
 
   notesInput: {

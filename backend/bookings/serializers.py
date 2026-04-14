@@ -1,6 +1,6 @@
 from django.db.models import Avg, Count
 from rest_framework import serializers
-from .models import Booking, BookingNegotiation, BookingEvent
+from .models import Booking, BookingNegotiation, BookingEvent, BookingMessage
 from reviews.models import Review
 
 
@@ -198,7 +198,6 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Either 'service' or 'package' is required.")
         if service and package:
             raise serializers.ValidationError("Provide only one: 'service' OR 'package', not both.")
-
         return attrs
 
     def create(self, validated_data):
@@ -208,6 +207,29 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             status=Booking.Status.PENDING,
             **validated_data,
         )
+
+
+class BookingMessageSerializer(serializers.ModelSerializer):
+    sender_name = serializers.CharField(source="sender.username", read_only=True)
+    is_me = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BookingMessage
+        fields = [
+            "id",
+            "booking",
+            "sender",
+            "sender_name",
+            "message",
+            "proposed_price",
+            "created_at",
+            "is_me",
+        ]
+        read_only_fields = ["id", "booking", "sender", "sender_name", "created_at", "is_me"]
+
+    def get_is_me(self, obj):
+        request = self.context.get("request")
+        return bool(request and request.user and request.user.id == obj.sender_id)
 
 
 class BookingStatusUpdateSerializer(serializers.ModelSerializer):

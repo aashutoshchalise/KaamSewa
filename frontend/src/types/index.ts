@@ -62,6 +62,17 @@ export type Booking = {
   updated_at: string;
 };
 
+export type BookingMessage = {
+  id: number;
+  booking: number;
+  sender: number;
+  sender_name: string;
+  message: string;
+  proposed_price?: string | null;
+  created_at: string;
+  is_me: boolean;
+};
+
 export type Service = {
   id: number;
   name: string;

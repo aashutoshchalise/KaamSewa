@@ -1,5 +1,5 @@
 import { api } from "./axios";
-import type { Booking } from "../types";
+import type { Booking, BookingMessage } from "../types";
 
 export type BookingNegotiation = {
   id: number;
@@ -68,15 +68,6 @@ export async function createNegotiation(
   return data;
 }
 
-export async function acceptNegotiation(
-  negotiationId: number
-): Promise<Booking> {
-  const { data } = await api.post<Booking>(
-    `/api/bookings/negotiation/${negotiationId}/accept/`
-  );
-  return data;
-}
-
 export async function startJob(id: number): Promise<Booking> {
   const { data } = await api.post<Booking>(`/api/bookings/${id}/start/`);
   return data;
@@ -87,22 +78,35 @@ export async function completeJob(id: number): Promise<Booking> {
   return data;
 }
 
-export async function updateBookingStatus(
-  id: number,
-  status: Booking["status"]
-): Promise<Booking> {
-  const { data } = await api.patch<Booking>(`/api/bookings/${id}/status/`, {
-    status,
-  });
-  return data;
-}
-
-export async function getBookingEvents(id: number): Promise<BookingEvent[]> {
-  const { data } = await api.get<BookingEvent[]>(`/api/bookings/${id}/events/`);
-  return data;
-}
-
 export async function cancelBooking(bookingId: number): Promise<any> {
   const { data } = await api.post(`/api/bookings/${bookingId}/cancel/`);
+  return data;
+}
+
+export async function getBookingMessages(
+  bookingId: number
+): Promise<BookingMessage[]> {
+  const { data } = await api.get<BookingMessage[]>(
+    `/api/bookings/${bookingId}/messages/`
+  );
+  return data;
+}
+
+export async function sendBookingMessage(
+  bookingId: number,
+  payload: {
+    message?: string;
+    proposed_price?: string;
+  }
+): Promise<BookingMessage> {
+  const { data } = await api.post<BookingMessage>(
+    `/api/bookings/${bookingId}/messages/send/`,
+    payload
+  );
+  return data;
+}
+
+export async function getBookingDetail(id: number): Promise<Booking> {
+  const { data } = await api.get<Booking>(`/api/bookings/${id}/`);
   return data;
 }

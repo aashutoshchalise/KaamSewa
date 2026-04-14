@@ -33,9 +33,7 @@ export default function ClientBookings() {
     return (
       <View style={styles.center}>
         <Ionicons name="document-outline" size={60} color="#CCCCCC" />
-        <Text style={{ marginTop: 15, color: "#666666" }}>
-          No bookings yet
-        </Text>
+        <Text style={{ marginTop: 15, color: "#666666" }}>No bookings yet</Text>
       </View>
     );
   }
@@ -50,6 +48,10 @@ export default function ClientBookings() {
         contentContainerStyle={{ paddingBottom: 30 }}
         renderItem={({ item }) => {
           const statusMeta = getStatusMeta(item.status);
+          const isNegotiated =
+            !!item.final_price &&
+            !!item.service_price &&
+            String(item.final_price) !== String(item.service_price);
 
           return (
             <TouchableOpacity
@@ -57,14 +59,20 @@ export default function ClientBookings() {
               onPress={() => router.push(`/(client)/booking/${item.id}`)}
             >
               <View style={{ flex: 1 }}>
-              <Text style={styles.service}>
-                {item.package_name || item.service_name || "Booking"}
-              </Text>
+                <Text style={styles.service}>
+                  {item.package_name || item.service_name || "Booking"}
+                </Text>
 
-              <Text style={styles.price}>
-                Rs. {item.service_price}
-                {item.service_pricing_unit ? ` / ${item.service_pricing_unit}` : ""}
-              </Text>
+                <Text style={styles.price}>
+                  Base: Rs. {item.service_price}
+                  {item.service_pricing_unit ? ` / ${item.service_pricing_unit}` : ""}
+                </Text>
+
+                {isNegotiated && (
+                  <Text style={styles.negotiatedPrice}>
+                    Negotiated: Rs. {item.final_price}
+                  </Text>
+                )}
 
                 <View
                   style={[
@@ -99,21 +107,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
   },
-
   title: {
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 20,
     color: "#111111",
   },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8F8F8",
   },
-
   card: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -122,18 +127,20 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     alignItems: "center",
   },
-
   service: {
     fontWeight: "bold",
     fontSize: 16,
     color: "#111111",
   },
-
   price: {
     marginTop: 4,
     color: "#666666",
   },
-
+  negotiatedPrice: {
+    marginTop: 4,
+    color: "#BE185D",
+    fontWeight: "700",
+  },
   statusBadge: {
     alignSelf: "flex-start",
     marginTop: 10,
@@ -141,7 +148,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
   },
-
   statusText: {
     fontWeight: "600",
     fontSize: 12,
