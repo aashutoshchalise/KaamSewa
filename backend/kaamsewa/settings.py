@@ -7,6 +7,8 @@ SECRET_KEY = "django-insecure-change-this-later"
 DEBUG = True
 ALLOWED_HOSTS = ["*"]
 
+KHALTI_SECRET_KEY = "4551fee3f61e4fd293bb998d56933343"
+
 INSTALLED_APPS = [
     "jazzmin",
     "django.contrib.admin",

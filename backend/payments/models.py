@@ -1,3 +1,5 @@
+from decimal import Decimal
+from django.conf import settings
 from django.db import models
 from bookings.models import Booking
 from django.contrib.auth import get_user_model
@@ -16,6 +18,11 @@ class Payment(models.Model):
     class Method(models.TextChoices):
         CASH = "CASH", "Cash"
         KHALTI = "KHALTI", "Khalti"
+
+    class CommissionStatus(models.TextChoices):
+        NOT_APPLICABLE = "NOT_APPLICABLE", "Not Applicable"
+        PENDING_SETTLEMENT = "PENDING_SETTLEMENT", "Pending Settlement"
+        SETTLED = "SETTLED", "Settled"
 
     booking = models.OneToOneField(
         Booking, on_delete=models.CASCADE, related_name="payment"
@@ -39,7 +46,8 @@ class Payment(models.Model):
     method = models.CharField(
         max_length=10,
         choices=Method.choices,
-        default=Method.CASH,
+        blank=True,
+        null=True,
     )
 
     status = models.CharField(
@@ -47,6 +55,14 @@ class Payment(models.Model):
         choices=Status.choices,
         default=Status.PENDING,
     )
+
+    commission_status = models.CharField(
+        max_length=30,
+        choices=CommissionStatus.choices,
+        default=CommissionStatus.NOT_APPLICABLE,
+    )
+
+    worker_wallet_credited = models.BooleanField(default=False)
 
     transaction_reference = models.CharField(
         max_length=100, blank=True, null=True
@@ -57,25 +73,24 @@ class Payment(models.Model):
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        if not self.commission_amount or not self.worker_earning:
-            total = float(self.amount)
-            self.commission_amount = total * 0.2
-            self.worker_earning = total * 0.8
+        if self.commission_amount is None or self.worker_earning is None:
+            total = Decimal(str(self.amount))
+            self.commission_amount = (total * Decimal("0.20")).quantize(Decimal("0.01"))
+            self.worker_earning = (total - self.commission_amount).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Payment #{self.id} - {self.status}"
 
 
-from django.conf import settings
-
 class WithdrawalRequest(models.Model):
     class Status(models.TextChoices):
-        PENDING = "PENDING"
-        APPROVED = "APPROVED"
-        REJECTED = "REJECTED"
+        PENDING = "PENDING", "Pending"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Rejected"
 
     worker = models.ForeignKey(
         settings.AUTH_USER_MODEL,

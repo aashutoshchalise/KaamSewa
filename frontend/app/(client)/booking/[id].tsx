@@ -424,21 +424,7 @@ export default function BookingDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  chatButton: {
-    marginTop: 8,
-    backgroundColor: "#FFC300",
-    height: 54,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  chatButtonText: {
-    color: "#111111",
-    fontWeight: "bold",
-    fontSize: 15,
-  },
+  
   safeArea: { flex: 1, backgroundColor: "#F8FAFC" },
   container: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { padding: 20, paddingTop: 12, paddingBottom: 40 },

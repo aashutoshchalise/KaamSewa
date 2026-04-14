@@ -12,34 +12,16 @@ from .serializers import PaymentSerializer, WithdrawalRequestSerializer
 
 import requests
 
+from django.conf import settings
 
-KHALTI_SECRET_KEY = "4551fee3f61e4fd293bb998d56933343"
+KHALTI_SECRET_KEY = settings.KHALTI_SECRET_KEY
+
 KHALTI_INITIATE_URL = "https://dev.khalti.com/api/v2/epayment/initiate/"
 KHALTI_LOOKUP_URL = "https://dev.khalti.com/api/v2/epayment/lookup/"
 
 
-KHALTI_RETURN_URL = "exp://192.168.1.75:8081/--/(client)/payment-success"
+KHALTI_RETURN_URL = "http://192.168.1.84:8081"
 KHALTI_WEBSITE_URL = "http://192.168.1.84:8081"
-
-
-class PaymentDetailByBookingView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, booking_id: int):
-        payment = (
-            Payment.objects.select_related("booking")
-            .filter(booking_id=booking_id)
-            .first()
-        )
-
-        if not payment:
-            return Response({"detail": "Payment not found."}, status=404)
-
-        if payment.client_id != request.user.id and payment.worker_id != request.user.id:
-            return Response({"detail": "Not your payment."}, status=403)
-
-        return Response(PaymentSerializer(payment).data, status=200)
-
 
 class InitiateKhaltiPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -54,7 +36,10 @@ class InitiateKhaltiPaymentView(APIView):
             return Response({"detail": "Not your payment."}, status=403)
 
         if payment.status != Payment.Status.PENDING:
-            return Response({"detail": "Already processed."}, status=400)
+            return Response({"detail": "Payment already processed."}, status=400)
+
+        payment.method = Payment.Method.KHALTI
+        payment.save(update_fields=["method"])
 
         payload = {
             "return_url": f"{KHALTI_RETURN_URL}?payment_id={payment.id}",
@@ -77,6 +62,7 @@ class InitiateKhaltiPaymentView(APIView):
                 timeout=20,
             )
             data = response.json()
+            print("KHALTI INITIATE RESPONSE:", data)
         except Exception as e:
             return Response({"detail": str(e)}, status=500)
 
@@ -97,6 +83,26 @@ class InitiateKhaltiPaymentView(APIView):
             status=200,
         )
 
+class PaymentDetailByBookingView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, booking_id: int):
+        payment = (
+            Payment.objects.select_related("booking")
+            .filter(booking_id=booking_id)
+            .first()
+        )
+
+        if not payment:
+            return Response({"detail": "Payment not found."}, status=404)
+
+        if payment.client_id != request.user.id and payment.worker_id != request.user.id:
+            return Response({"detail": "Not your payment."}, status=403)
+
+        return Response(PaymentSerializer(payment).data, status=200)
+
+
+from django.utils import timezone
 
 class VerifyKhaltiPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -120,7 +126,7 @@ class VerifyKhaltiPaymentView(APIView):
             )
 
         if not payment.khalti_pidx:
-            return Response({"detail": "No Khalti session."}, status=400)
+            return Response({"detail": "No Khalti session found."}, status=400)
 
         headers = {
             "Authorization": f"Key {KHALTI_SECRET_KEY}",
@@ -135,6 +141,7 @@ class VerifyKhaltiPaymentView(APIView):
                 timeout=20,
             )
             data = response.json()
+            print("KHALTI VERIFY RESPONSE:", data)
         except Exception as e:
             return Response({"detail": str(e)}, status=500)
 
@@ -144,13 +151,25 @@ class VerifyKhaltiPaymentView(APIView):
         if data.get("status") != "Completed":
             return Response(
                 {
-                    "detail": "Payment not completed",
+                    "detail": "Payment not completed yet.",
                     "khalti_response": data,
                 },
                 status=400,
             )
 
         with transaction.atomic():
+            payment = Payment.objects.select_for_update().get(pk=payment.pk)
+
+            if payment.status == Payment.Status.PAID:
+                return Response(
+                    {
+                        "detail": "Payment already verified",
+                        "transaction_reference": payment.transaction_reference,
+                    },
+                    status=200,
+                )
+
+            payment.method = Payment.Method.KHALTI
             payment.status = Payment.Status.PAID
             payment.transaction_reference = (
                 data.get("transaction_id")
@@ -158,23 +177,39 @@ class VerifyKhaltiPaymentView(APIView):
                 or payment.transaction_reference
                 or ""
             )
-            payment.save(update_fields=["status", "transaction_reference"])
-
-            worker_profile = WorkerProfile.objects.select_for_update().get(
-                user=payment.worker
+            payment.paid_at = timezone.now()
+            payment.commission_status = Payment.CommissionStatus.SETTLED
+            payment.save(
+                update_fields=[
+                    "method",
+                    "status",
+                    "transaction_reference",
+                    "paid_at",
+                    "commission_status",
+                ]
             )
-            worker_profile.total_earned += payment.worker_earning
-            worker_profile.available_balance += payment.worker_earning
-            worker_profile.save(update_fields=["total_earned", "available_balance"])
+
+            if not payment.worker_wallet_credited:
+                worker_profile = WorkerProfile.objects.select_for_update().get(
+                    user=payment.worker
+                )
+                worker_profile.total_earned += payment.worker_earning
+                worker_profile.available_balance += payment.worker_earning
+                worker_profile.save(update_fields=["total_earned", "available_balance"])
+
+                payment.worker_wallet_credited = True
+                payment.save(update_fields=["worker_wallet_credited"])
 
         return Response(
             {
-                "detail": "Payment verified",
+                "detail": "Khalti payment verified successfully.",
                 "transaction_reference": payment.transaction_reference,
             },
             status=200,
         )
 
+
+from django.utils import timezone
 
 class ConfirmPaymentView(APIView):
     permission_classes = [IsAuthenticated]
@@ -192,18 +227,34 @@ class ConfirmPaymentView(APIView):
             return Response({"detail": "Payment already processed."}, status=400)
 
         with transaction.atomic():
+            payment.method = Payment.Method.CASH
             payment.status = Payment.Status.PAID
-            payment.transaction_reference = "MOCK_TXN_" + str(payment.id)
-            payment.save(update_fields=["status", "transaction_reference"])
+            payment.transaction_reference = f"CASH_{payment.id}"
+            payment.paid_at = timezone.now()
+            payment.commission_status = Payment.CommissionStatus.PENDING_SETTLEMENT
+            payment.save(
+                update_fields=[
+                    "method",
+                    "status",
+                    "transaction_reference",
+                    "paid_at",
+                    "commission_status",
+                ]
+            )
 
             worker_profile = WorkerProfile.objects.select_for_update().get(
                 user=payment.worker
             )
-            worker_profile.total_earned += payment.worker_earning
-            worker_profile.available_balance += payment.worker_earning
-            worker_profile.save(update_fields=["total_earned", "available_balance"])
 
-        return Response({"detail": "Payment confirmed and wallet updated."}, status=200)
+            worker_profile.total_earned += payment.worker_earning
+            worker_profile.save(update_fields=["total_earned"])
+
+        return Response(
+            {
+                "detail": "Cash payment confirmed. Worker wallet not credited because payment was made directly in cash."
+            },
+            status=200,
+        )
 
 
 class WorkerWalletSummaryView(APIView):
