@@ -19,7 +19,6 @@ from .serializers import (
     BookingNegotiationSerializer,
 )
 
-
 def role_of(user) -> str:
     return (getattr(user, "role", "") or "").upper().strip()
 
@@ -256,18 +255,20 @@ class CompleteJobView(APIView):
                 commission_amount = (total_amount * commission_rate).quantize(Decimal("0.01"))
                 worker_earning = (total_amount - commission_amount).quantize(Decimal("0.01"))
 
-                Payment.objects.create(
-                    booking=booking,
-                    client=booking.client,
-                    worker=booking.worker,
-                    amount=total_amount,
-                    commission_amount=commission_amount,
-                    worker_earning=worker_earning,
-                    method=Payment.Method.CASH,
-                    status=Payment.Status.PENDING,
-                    khalti_pidx=None,
-                    transaction_reference="",
-                )
+            Payment.objects.create(
+                booking=booking,
+                client=booking.client,
+                worker=booking.worker,
+                amount=total_amount,
+                commission_amount=commission_amount,
+                worker_earning=worker_earning,
+                method=None,
+                status=Payment.Status.PENDING,
+                commission_status=Payment.CommissionStatus.NOT_APPLICABLE,
+                worker_wallet_credited=False,
+                khalti_pidx=None,
+                transaction_reference="",
+            )
 
             Notification.objects.create(
                 user=booking.client,

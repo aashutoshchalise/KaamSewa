@@ -1,9 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
-# ----------------------------
 # Custom User with roles
-# ----------------------------
 class CustomUser(AbstractUser):
     ROLE_CHOICES = (
         ('admin', 'Admin'),
@@ -21,9 +19,8 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return f"{self.username} ({self.role})"
 
-# ----------------------------
+
 # Worker Profile
-# ----------------------------
 class WorkerProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='worker_profile')
     skill_summary = models.TextField()
@@ -34,9 +31,7 @@ class WorkerProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} Profile"
 
-# ----------------------------
 # Client Profile
-# ----------------------------
 class ClientProfile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name='client_profile')
     phone_number = models.CharField(max_length=15, blank=True)
