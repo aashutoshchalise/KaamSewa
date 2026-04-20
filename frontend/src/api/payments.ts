@@ -9,9 +9,9 @@ export type Payment = {
   client: number;
   worker: number;
   amount: string;
-  commission_amount: string;
-  worker_earning: string;
-  method: PaymentMethod;
+  commission_amount?: string;
+  worker_earning?: string;
+  method: PaymentMethod | null;
   status: PaymentStatus;
   transaction_reference?: string | null;
   khalti_pidx?: string | null;
@@ -28,8 +28,6 @@ export type VerifyKhaltiPaymentResponse = {
   transaction_reference?: string;
 };
 
-
-
 export type WithdrawalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type WithdrawalRequest = {
@@ -45,6 +43,8 @@ export type WorkerWalletSummary = {
   available_balance: string;
   pending_withdrawals_total: string;
   pending_withdrawals_count: number;
+  khalti_earnings: string;
+  cash_earnings: string;
 };
 
 export async function getPaymentByBooking(
@@ -77,13 +77,15 @@ export async function initiateKhaltiPayment(
 export async function verifyKhaltiPayment(
   paymentId: number
 ): Promise<VerifyKhaltiPaymentResponse> {
-  const res = await api.post(`/api/payments/${paymentId}/khalti/verify/`);
-  return res.data;
+  const { data } = await api.post<VerifyKhaltiPaymentResponse>(
+    `/api/payments/${paymentId}/khalti/verify/`
+  );
+  return data;
 }
 
 export async function getWorkerWalletSummary(): Promise<WorkerWalletSummary> {
   const { data } = await api.get<WorkerWalletSummary>(
-    "/api/payments/wallet/summary/"
+    `/api/payments/wallet/summary/`
   );
   return data;
 }
@@ -92,7 +94,7 @@ export async function createWithdrawal(
   amount: number
 ): Promise<{ detail: string }> {
   const { data } = await api.post<{ detail: string }>(
-    "/api/payments/withdraw/",
+    `/api/payments/withdraw/`,
     { amount }
   );
   return data;
@@ -100,7 +102,7 @@ export async function createWithdrawal(
 
 export async function getMyWithdrawals(): Promise<WithdrawalRequest[]> {
   const { data } = await api.get<WithdrawalRequest[]>(
-    "/api/payments/withdraw/my/"
+    `/api/payments/withdraw/my/`
   );
   return data;
 }

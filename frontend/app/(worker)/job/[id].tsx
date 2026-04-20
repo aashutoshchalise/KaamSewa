@@ -114,17 +114,22 @@ export default function WorkerJobDetailScreen() {
 
   const statusMeta = getStatusMeta(booking.status);
 
+  const hasNegotiationData =
+    booking.negotiation_id != null ||
+    booking.negotiated_price != null ||
+    booking.negotiation_status != null ||
+    booking.negotiation_message != null;
+
   const isNegotiated =
-    !!booking.final_price &&
-    !!booking.service_price &&
+    booking.final_price != null &&
+    booking.service_price != null &&
     String(booking.final_price) !== String(booking.service_price);
 
   const canClaim =
     booking.worker == null &&
     ["PENDING", "NEGOTIATING"].includes(booking.status);
 
-  const canNegotiate =
-    ["PENDING", "NEGOTIATING", "ACCEPTED"].includes(booking.status);
+  const canNegotiate = hasNegotiationData;
 
   const canStart = booking.worker != null && booking.status === "ACCEPTED";
   const canComplete = booking.worker != null && booking.status === "IN_PROGRESS";
@@ -153,7 +158,7 @@ export default function WorkerJobDetailScreen() {
           <Text style={styles.heroTitle}>
             {booking.package_name || booking.service_name || "Booking"}
           </Text>
-          <Text style={styles.heroSubtitle}>Job Details & Negotiation</Text>
+          <Text style={styles.heroSubtitle}>Job Details</Text>
 
           <View style={styles.heroPriceBox}>
             <Text style={styles.heroPriceLabel}>Base Price</Text>
@@ -164,7 +169,7 @@ export default function WorkerJobDetailScreen() {
 
             {isNegotiated && (
               <>
-                <Text style={styles.heroNegotiatedLabel}>Current Negotiated Price</Text>
+                <Text style={styles.heroNegotiatedLabel}>Negotiated Price</Text>
                 <Text style={styles.heroNegotiatedPrice}>Rs {booking.final_price}</Text>
               </>
             )}
@@ -286,37 +291,36 @@ export default function WorkerJobDetailScreen() {
             </TouchableOpacity>
           </View>
         )}
+
         {booking.review_id && (
-  <View style={styles.card}>
-    <Text style={styles.sectionTitle}>Client Review</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Client Review</Text>
 
-    <View style={styles.reviewCard}>
-      <View style={styles.reviewTopRow}>
-        <View style={styles.reviewBadge}>
-          <Ionicons name="star" size={16} color="#F4B400" />
-          <Text style={styles.reviewRatingText}>{booking.review_rating}/5</Text>
-        </View>
+            <View style={styles.reviewCard}>
+              <View style={styles.reviewTopRow}>
+                <View style={styles.reviewBadge}>
+                  <Ionicons name="star" size={16} color="#F4B400" />
+                  <Text style={styles.reviewRatingText}>{booking.review_rating}/5</Text>
+                </View>
 
-        <Text style={styles.reviewByText}>
-          by {booking.review_client_username || "Client"}
-        </Text>
-      </View>
+                <Text style={styles.reviewByText}>
+                  by {booking.review_client_username || "Client"}
+                </Text>
+              </View>
 
-      <Text style={styles.reviewCommentText}>
-        {booking.review_comment || "No written comment provided."}
-      </Text>
+              <Text style={styles.reviewCommentText}>
+                {booking.review_comment || "No written comment provided."}
+              </Text>
 
-      {booking.review_created_at ? (
-        <Text style={styles.reviewDateText}>
-          {new Date(booking.review_created_at).toLocaleString()}
-        </Text>
-      ) : null}
-    </View>
-  </View>
-)}
+              {booking.review_created_at ? (
+                <Text style={styles.reviewDateText}>
+                  {new Date(booking.review_created_at).toLocaleString()}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        )}
       </ScrollView>
-
-      
     </SafeAreaView>
   );
 }

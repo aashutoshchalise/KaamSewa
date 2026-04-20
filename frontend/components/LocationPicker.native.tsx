@@ -1,21 +1,30 @@
-import MapView, { Marker, MapPressEvent } from "react-native-maps";
-import { useState } from "react";
+import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 type Props = {
-  onLocationSelect: (lat: number, lng: number) => void;
+  onLocationSelect: (location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  }) => void;
 };
 
-export default function MapPicker({ onLocationSelect }: Props) {
+export default function LocationPicker({ onLocationSelect }: Props) {
   const [marker, setMarker] = useState({
     latitude: 27.7172,
-    longitude: 85.3240,
+    longitude: 85.324,
   });
 
-  const handlePress = (e: MapPressEvent) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setMarker({ latitude, longitude });
-    onLocationSelect(latitude, longitude);
+  const handlePress = (e: any) => {
+    const coords = e.nativeEvent.coordinate;
+    setMarker(coords);
+
+    onLocationSelect({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      address: "Selected location",
+    });
   };
 
   return (
@@ -24,7 +33,7 @@ export default function MapPicker({ onLocationSelect }: Props) {
         style={styles.map}
         initialRegion={{
           latitude: 27.7172,
-          longitude: 85.3240,
+          longitude: 85.324,
           latitudeDelta: 0.01,
           longitudeDelta: 0.01,
         }}

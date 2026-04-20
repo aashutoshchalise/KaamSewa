@@ -11,6 +11,7 @@ class WorkerSkill(models.Model):
     def __str__(self):
         return self.name
 
+
 class SupportMessage(models.Model):
     class Status(models.TextChoices):
         OPEN = "OPEN", "Open"
@@ -38,8 +39,8 @@ class SupportMessage(models.Model):
             self.status = "REPLIED"
         super().save(*args, **kwargs)
 
+
 class CustomUser(AbstractUser):
-    
     ROLE_CHOICES = (
         ("ADMIN", "Admin"),
         ("WORKER", "Worker"),
@@ -82,20 +83,24 @@ class WorkerProfile(models.Model):
     availability_status = models.CharField(max_length=30, default="AVAILABLE")
     skills = models.ManyToManyField(WorkerSkill, blank=True, related_name="workers")
 
-    # Cached rating (kept in sync by WorkerReview save/delete)
     rating_avg = models.DecimalField(max_digits=3, decimal_places=2, default=0)
     rating_count = models.PositiveIntegerField(default=0)
-    
+
     total_earned = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     available_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Admin commission still owed from cash-in-hand jobs.
+    # This gets settled automatically from future Khalti worker earnings.
+    pending_admin_commission = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+    )
 
     def __str__(self):
         return f"WorkerProfile: {self.user.username}"
 
     def recompute_rating(self):
-        """
-        Recalculate cached rating fields from WorkerReview table.
-        """
         agg = self.reviews.aggregate(avg=Avg("rating"), cnt=Count("id"))
         avg = agg["avg"] or 0
         cnt = agg["cnt"] or 0
@@ -103,16 +108,8 @@ class WorkerProfile(models.Model):
         self.rating_count = cnt
         self.save(update_fields=["rating_avg", "rating_count"])
 
-    
-
 
 class WorkerReview(models.Model):
-    """
-    Rating system:
-    - One client can leave at most one review per booking for a worker.
-    - You can later extend with moderation, replies, etc.
-    """
-
     worker_profile = models.ForeignKey(
         WorkerProfile,
         on_delete=models.CASCADE,
@@ -124,7 +121,6 @@ class WorkerReview(models.Model):
         related_name="given_worker_reviews",
     )
 
-    # Link to booking for integrity (recommended)
     booking = models.OneToOneField(
         "bookings.Booking",
         on_delete=models.CASCADE,
@@ -150,7 +146,6 @@ class WorkerReview(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # keep cached ratings synced
         self.worker_profile.recompute_rating()
 
     def delete(self, *args, **kwargs):

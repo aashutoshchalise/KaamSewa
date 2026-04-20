@@ -12,19 +12,54 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getMyBookings } from "../../src/api/bookings";
-import {
-  getWorkerWalletSummary,
-  getMyWithdrawals,
-  createWithdrawal,
-  type WithdrawalRequest,
-  type WorkerWalletSummary,
-} from "../../src/api/payments";
+import { api } from "../../src/api/axios";
 import type { Booking } from "../../src/types";
+
+type WithdrawalStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+type WithdrawalRequest = {
+  id: number;
+  worker: number;
+  amount: string;
+  status: WithdrawalStatus;
+  created_at: string;
+};
+
+type WorkerWalletSummary = {
+  total_earned: string;
+  available_balance: string;
+  pending_withdrawals_total: string;
+  pending_withdrawals_count: number;
+  khalti_earnings: string;
+  cash_earnings: string;
+};
 
 const COMMISSION_RATE = 0.2;
 
 function getJobAmount(job: Booking) {
   return Number(job.final_price || job.service_price || 0);
+}
+
+async function fetchWorkerWalletSummary(): Promise<WorkerWalletSummary> {
+  const { data } = await api.get<WorkerWalletSummary>(
+    "/api/payments/wallet/summary/"
+  );
+  return data;
+}
+
+async function fetchMyWithdrawals(): Promise<WithdrawalRequest[]> {
+  const { data } = await api.get<WithdrawalRequest[]>(
+    "/api/payments/withdraw/my/"
+  );
+  return data;
+}
+
+async function submitWithdrawal(amount: number): Promise<{ detail: string }> {
+  const { data } = await api.post<{ detail: string }>(
+    "/api/payments/withdraw/",
+    { amount }
+  );
+  return data;
 }
 
 export default function WorkerIncome() {
@@ -38,17 +73,19 @@ export default function WorkerIncome() {
 
   const { data: wallet, isLoading: walletLoading } = useQuery<WorkerWalletSummary>({
     queryKey: ["worker-wallet-summary"],
-    queryFn: getWorkerWalletSummary,
+    queryFn: fetchWorkerWalletSummary,
   });
 
-  const { data: withdrawals, isLoading: withdrawalsLoading } = useQuery<WithdrawalRequest[]>({
+  const { data: withdrawals, isLoading: withdrawalsLoading } = useQuery<
+    WithdrawalRequest[]
+  >({
     queryKey: ["worker-withdrawals"],
-    queryFn: getMyWithdrawals,
+    queryFn: fetchMyWithdrawals,
   });
 
   const withdrawMutation = useMutation({
-    mutationFn: createWithdrawal,
-    onSuccess: (res) => {
+    mutationFn: submitWithdrawal,
+    onSuccess: (res: { detail: string }) => {
       Alert.alert("Success", res.detail);
       setWithdrawAmount("");
       queryClient.invalidateQueries({ queryKey: ["worker-wallet-summary"] });
@@ -67,17 +104,9 @@ export default function WorkerIncome() {
     [bookings]
   );
 
-  const totalJobValue = completedJobs.reduce(
-    (sum, job) => sum + getJobAmount(job),
-    0
-  );
-
-  const estimatedCommission = Math.round(totalJobValue * COMMISSION_RATE);
-  const estimatedWorkerEarnings = Math.round(totalJobValue - estimatedCommission);
-
   const averagePerJob =
     completedJobs.length > 0
-      ? Math.round(estimatedWorkerEarnings / completedJobs.length)
+      ? Math.round(Number(wallet?.total_earned || 0) / completedJobs.length)
       : 0;
 
   const isLoading = bookingsLoading || walletLoading || withdrawalsLoading;
@@ -87,6 +116,11 @@ export default function WorkerIncome() {
 
     if (!amount || amount <= 0) {
       Alert.alert("Enter a valid withdrawal amount");
+      return;
+    }
+
+    if (amount > Number(wallet?.available_balance || 0)) {
+      Alert.alert("Withdrawal Error", "Amount exceeds available Khalti balance.");
       return;
     }
 
@@ -119,13 +153,16 @@ export default function WorkerIncome() {
 
             <Text style={styles.heroTitle}>Income & Wallet</Text>
             <Text style={styles.heroSubtitle}>
-              Track your earnings, balance, and withdrawals
+              Track your Khalti earnings, cash earnings, and withdrawals
             </Text>
 
             <View style={styles.summaryPanel}>
               <Text style={styles.summaryLabel}>Available Balance</Text>
               <Text style={styles.summaryAmount}>
                 Rs. {wallet?.available_balance ?? "0.00"}
+              </Text>
+              <Text style={styles.summaryHint}>
+                Only Khalti earnings can be withdrawn
               </Text>
             </View>
 
@@ -148,6 +185,24 @@ export default function WorkerIncome() {
 
           <View style={styles.breakdownRow}>
             <View style={styles.breakdownCard}>
+              <Text style={styles.breakdownLabel}>Khalti Earnings</Text>
+              <Text style={styles.breakdownValue}>
+                Rs. {wallet?.khalti_earnings ?? "0.00"}
+              </Text>
+              <Text style={styles.breakdownSub}>Withdrawable</Text>
+            </View>
+
+            <View style={styles.breakdownCard}>
+              <Text style={styles.breakdownLabel}>Cash In Hand</Text>
+              <Text style={styles.breakdownValue}>
+                Rs. {wallet?.cash_earnings ?? "0.00"}
+              </Text>
+              <Text style={styles.breakdownSub}>Display only</Text>
+            </View>
+          </View>
+
+          <View style={styles.breakdownRow}>
+            <View style={styles.breakdownCard}>
               <Text style={styles.breakdownLabel}>Completed Jobs</Text>
               <Text style={styles.breakdownValue}>{completedJobs.length}</Text>
             </View>
@@ -161,7 +216,7 @@ export default function WorkerIncome() {
           <View style={styles.withdrawCard}>
             <Text style={styles.withdrawTitle}>Request Withdrawal</Text>
             <Text style={styles.withdrawSubtitle}>
-              Withdraw from your available balance
+              You can withdraw only from your available Khalti balance
             </Text>
 
             <TextInput
@@ -188,8 +243,9 @@ export default function WorkerIncome() {
           <View style={styles.noticeCard}>
             <Ionicons name="information-circle-outline" size={18} color="#B45309" />
             <Text style={styles.noticeText}>
-              Your Khalti or cash-confirmed payments increase your available balance.
-              Admin-approved payouts can be handled later from withdrawal requests.
+              Khalti payments are added to your available balance after commission
+              deduction. Cash in hand payments are shown separately and are not
+              withdrawable from the wallet.
             </Text>
           </View>
 
@@ -305,31 +361,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 50,
   },
-
   contentContainer: {
     paddingBottom: 24,
   },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#F8FAFC",
   },
-
   heroCard: {
     backgroundColor: "#111111",
     borderRadius: 24,
     padding: 22,
     marginBottom: 16,
   },
-
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   heroIcon: {
     width: 46,
     height: 46,
@@ -338,108 +389,101 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   heroTitle: {
     marginTop: 18,
     fontSize: 22,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-
   heroSubtitle: {
     marginTop: 6,
     color: "#D1D5DB",
     fontSize: 14,
   },
-
   summaryPanel: {
     backgroundColor: "#1F2937",
     borderRadius: 18,
     padding: 16,
     marginTop: 18,
   },
-
   summaryLabel: {
     color: "#9CA3AF",
     fontSize: 13,
   },
-
   summaryAmount: {
     marginTop: 6,
     fontSize: 28,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-
+  summaryHint: {
+    marginTop: 6,
+    color: "#9CA3AF",
+    fontSize: 12,
+  },
   heroStatsRow: {
     flexDirection: "row",
     gap: 12,
     marginTop: 16,
   },
-
   heroStatBox: {
     flex: 1,
     backgroundColor: "#1F2937",
     borderRadius: 16,
     padding: 14,
   },
-
   heroStatNumber: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#FFFFFF",
   },
-
   heroStatLabel: {
     marginTop: 4,
     fontSize: 12,
     color: "#9CA3AF",
   },
-
   breakdownRow: {
     flexDirection: "row",
     gap: 12,
     marginBottom: 14,
   },
-
   breakdownCard: {
     flex: 1,
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     padding: 16,
   },
-
   breakdownLabel: {
     fontSize: 13,
     color: "#6B7280",
   },
-
   breakdownValue: {
     marginTop: 8,
     fontSize: 20,
     fontWeight: "bold",
     color: "#111111",
   },
-
+  breakdownSub: {
+    marginTop: 4,
+    fontSize: 12,
+    color: "#9CA3AF",
+  },
   withdrawCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 18,
     marginBottom: 14,
   },
-
   withdrawTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111111",
   },
-
   withdrawSubtitle: {
     marginTop: 4,
     fontSize: 13,
     color: "#6B7280",
   },
-
   input: {
     marginTop: 14,
     backgroundColor: "#F3F4F6",
@@ -449,7 +493,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#111111",
   },
-
   withdrawButton: {
     marginTop: 14,
     backgroundColor: "#F4B400",
@@ -460,13 +503,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
-
   withdrawButtonText: {
     color: "#111111",
     fontWeight: "bold",
     fontSize: 16,
   },
-
   noticeCard: {
     backgroundColor: "#FFFBEB",
     borderRadius: 16,
@@ -476,46 +517,39 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 18,
   },
-
   noticeText: {
     flex: 1,
     color: "#92400E",
     fontSize: 13,
     lineHeight: 19,
   },
-
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 14,
   },
-
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111111",
   },
-
   sectionCount: {
     fontSize: 13,
     color: "#6B7280",
   },
-
   emptyCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 28,
     alignItems: "center",
   },
-
   emptyTitle: {
     marginTop: 12,
     fontSize: 17,
     fontWeight: "bold",
     color: "#111111",
   },
-
   emptyText: {
     marginTop: 6,
     fontSize: 14,
@@ -523,24 +557,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
-
   emptySmallCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 16,
     marginBottom: 18,
   },
-
   emptySmallText: {
     color: "#6B7280",
     fontSize: 14,
   },
-
   withdrawalsBlock: {
     marginBottom: 18,
     gap: 10,
   },
-
   withdrawRow: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
@@ -549,45 +579,38 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   withdrawRowAmount: {
     fontSize: 15,
     fontWeight: "bold",
     color: "#111111",
   },
-
   withdrawRowDate: {
     marginTop: 4,
     fontSize: 12,
     color: "#6B7280",
   },
-
   withdrawStatusBadge: {
     backgroundColor: "#F3F4F6",
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-
   withdrawStatusText: {
     fontSize: 12,
     fontWeight: "700",
     color: "#111111",
   },
-
   jobCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     padding: 16,
     marginBottom: 14,
   },
-
   jobTop: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
-
   jobIconWrap: {
     width: 38,
     height: 38,
@@ -596,67 +619,56 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
   jobTitle: {
     fontSize: 15,
     fontWeight: "bold",
     color: "#111111",
   },
-
   jobSub: {
     marginTop: 4,
     fontSize: 12,
     color: "#6B7280",
   },
-
   jobAmount: {
     fontSize: 15,
     fontWeight: "bold",
     color: "#111111",
   },
-
   payoutBox: {
     backgroundColor: "#F8FAFC",
     borderRadius: 16,
     padding: 14,
     marginTop: 14,
   },
-
   payoutRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 6,
   },
-
   payoutLabel: {
     fontSize: 13,
     color: "#6B7280",
   },
-
   payoutValue: {
     fontSize: 13,
     color: "#111111",
     fontWeight: "600",
   },
-
   payoutStrong: {
     fontSize: 14,
     color: "#111111",
     fontWeight: "bold",
   },
-
   jobInfoBlock: {
     marginTop: 14,
     gap: 10,
   },
-
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
   },
-
   infoText: {
     flex: 1,
     fontSize: 14,
