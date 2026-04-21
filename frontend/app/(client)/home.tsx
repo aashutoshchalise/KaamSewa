@@ -223,9 +223,23 @@ export default function ClientHome() {
             key={pkg.id}
             style={styles.packageCard}
             onPress={() => router.push(`/package/${pkg.id}`)}
+            activeOpacity={0.9}
           >
-            <Text style={styles.packageTitle}>{pkg.name}</Text>
-            <Text style={styles.packagePrice}>Rs. {pkg.total_base_price}</Text>
+            <View style={styles.packageRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.packageTitle}>{pkg.name}</Text>
+                <View style={styles.packageBadge}>
+                  <Text style={styles.packageBadgeText}>Package</Text>
+                </View>
+              </View>
+        
+              <View style={styles.packagePriceBox}>
+                <Text style={styles.packageCurrency}>Rs.</Text>
+                <Text style={styles.packagePrice}>
+                  {Number(pkg.total_base_price).toFixed(0)}
+                </Text>
+              </View>
+            </View>
           </TouchableOpacity>
         ))
       )}
@@ -509,6 +523,43 @@ const styles = StyleSheet.create({
 
   packagePrice: {
     marginTop: 6,
+    color: "#F4B400",
+    fontWeight: "600",
+  },
+
+  packageRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  
+  packageBadge: {
+    marginTop: 8,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+    alignSelf: "flex-start",
+  },
+  
+  packageBadgeText: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  
+  packagePriceBox: {
+    backgroundColor: "#FFF8E1",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 76,
+  },
+  
+  packageCurrency: {
+    fontSize: 12,
     color: "#F4B400",
     fontWeight: "600",
   },

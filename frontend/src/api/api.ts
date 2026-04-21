@@ -14,11 +14,11 @@ export const api = axios.create({
 const ACCESS_KEY = "access_token";
 const REFRESH_KEY = "refresh_token";
 
-// 🔹 TOKEN GETTERS
+// TOKEN GETTERS
 export const getAccessToken = () => AsyncStorage.getItem(ACCESS_KEY);
 export const getRefreshToken = () => AsyncStorage.getItem(REFRESH_KEY);
 
-// 🔹 SET TOKENS
+// SET TOKENS
 export const setTokens = async (access: string, refresh: string) => {
   await AsyncStorage.multiSet([
     [ACCESS_KEY, access],

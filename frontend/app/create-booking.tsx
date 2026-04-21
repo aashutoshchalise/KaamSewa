@@ -13,7 +13,13 @@ import { useMemo, useState } from "react";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { createBooking, createNegotiation } from "../src/api/bookings";
-import LocationPicker from "../components/LocationPicker";
+import LocationPicker from "../components/LocationPicker.native";
+
+type SelectedLocation = {
+  latitude: number;
+  longitude: number;
+  address: string;
+};
 
 export default function CreateBooking() {
   const { serviceId, packageId, mode } = useLocalSearchParams();
@@ -222,7 +228,7 @@ export default function CreateBooking() {
         </Text>
 
         <LocationPicker
-          onLocationSelect={(location) => {
+          onLocationSelect={(location: SelectedLocation) => {
             setPickedCoords({
               lat: location.latitude,
               lng: location.longitude,
@@ -336,7 +342,7 @@ export default function CreateBooking() {
           <TextInput
             placeholder="Optional message to worker"
             placeholderTextColor="#888"
-            style={[styles.input, styles.notesInput]}
+            style={[styles.input, styles.notesInput, styles.offerMessageInput]}
             multiline
             value={offerMessage}
             onChangeText={setOfferMessage}
@@ -445,6 +451,10 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 100,
     textAlignVertical: "top",
+  },
+
+  offerMessageInput: {
+    marginTop: 12,
   },
 
   scheduleRow: {
