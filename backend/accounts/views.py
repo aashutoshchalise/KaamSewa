@@ -153,3 +153,48 @@ class MarkNotificationReadView(APIView):
         notification.is_read = True
         notification.save(update_fields=["is_read"])
         return Response({"detail": "Notification marked as read."})
+
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.hashers import check_password
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("new_password")
+        confirm_password = request.data.get("confirm_password")
+
+        if not current_password or not new_password or not confirm_password:
+            return Response({"detail": "All fields are required."}, status=400)
+
+        # Check current password
+        if not user.check_password(current_password):
+            return Response({"detail": "Current password is incorrect."}, status=400)
+
+
+    
+        # NEW CHECK
+        if current_password == new_password:
+            return Response(
+                {"detail": "New password must be different from current password."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Match new passwords
+        if new_password != confirm_password:
+            return Response({"detail": "Passwords do not match."}, status=400)
+
+        # Validate password strength
+        try:
+            validate_password(new_password, user=user)
+        except Exception as e:
+            return Response({"detail": list(e.messages)}, status=400)
+
+        # Set new password
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"detail": "Password changed successfully."})

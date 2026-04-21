@@ -12,6 +12,7 @@ from .views import (
     MySupportMessagesView,
     MyNotificationsView,
     MarkNotificationReadView,
+    ChangePasswordView,
 )
 
 urlpatterns = [
@@ -20,6 +21,7 @@ urlpatterns = [
     path("auth/refresh/", TokenRefreshView.as_view()),
     path("auth/me/", MeView.as_view()),
     path("auth/me/update/", ProfileUpdateView.as_view(), name="me-update"),
+    path("auth/change-password/", ChangePasswordView.as_view()),
 
     path("admin/workers/create/", AdminCreateWorkerView.as_view()),
     path("admin/workers/<int:user_id>/approve/", AdminApproveWorkerView.as_view()),

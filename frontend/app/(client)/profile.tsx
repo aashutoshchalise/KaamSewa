@@ -88,6 +88,12 @@ export default function ClientProfileScreen() {
         />
 
         <MenuItem
+          icon="lock-closed-outline"
+          label="Change Password"
+          onPress={() => router.push("/(common)/change-password")}
+        />
+
+        <MenuItem
           icon="log-out-outline"
           label="Logout"
           color="#F4B400"

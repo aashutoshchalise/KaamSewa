@@ -155,6 +155,12 @@ export default function WorkerProfileScreen() {
           label="Edit Profile"
           onPress={() => router.push("/(worker)/edit-profile")}
         />
+        
+        <MenuItem
+          icon="lock-closed-outline"
+          label="Change Password"
+          onPress={() => router.push("/(common)/change-password")}
+        />
 
         <MenuItem
           icon="log-out-outline"
